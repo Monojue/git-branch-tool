@@ -448,17 +448,8 @@ function browse(dir) {
 }
 
 // ---------------------------------------------------------------- http
-// App mode (started by the desktop launcher with --app): there is no console window, so the
-// server stops by itself once the app window has been closed. The page pings every 15 s.
-const APP_MODE = process.argv.includes('--app');
-let lastPing = Date.now();
-if (APP_MODE) setInterval(() => {
-  if (Date.now() - lastPing > 60000) { console.log('App window closed: stopping.'); process.exit(0); }
-}, 10000).unref();
-
-const NO_REPO_OK = new Set(['GET /api/repos', 'POST /api/repo/select', 'POST /api/repo/forget', 'GET /api/browse', 'GET /api/ping']);
+const NO_REPO_OK = new Set(['GET /api/repos', 'POST /api/repo/select', 'POST /api/repo/forget', 'GET /api/browse']);
 const ROUTES = {
-  'GET /api/ping': () => { lastPing = Date.now(); return { ok: true }; },
   'GET /api/repos': () => repoList(),
   'POST /api/repo/select': (q, b) => selectRepo(b.path),
   'POST /api/repo/forget': (q, b) => forgetRepo(b.path),
@@ -480,12 +471,6 @@ const server = http.createServer(async (req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!['localhost', '127.0.0.1'].includes(host)) { res.writeHead(403); return res.end('forbidden'); }
   const url = new URL(req.url, 'http://localhost');
-  if (req.method === 'GET' && (url.pathname === '/icon.png' || url.pathname === '/icon.svg')) {
-    const f = path.join(__dirname, url.pathname.slice(1));
-    if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); }
-    res.writeHead(200, { 'content-type': url.pathname.endsWith('.png') ? 'image/png' : 'image/svg+xml', 'cache-control': 'max-age=3600' });
-    return res.end(fs.readFileSync(f));
-  }
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
@@ -508,7 +493,7 @@ const server = http.createServer(async (req, res) => {
     const data = await fn(url.searchParams, body);
     res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(data));
-    if (url.pathname !== '/api/ping') console.log(`${req.method} ${url.pathname} ${Date.now() - started}ms`);
+    console.log(`${req.method} ${url.pathname} ${Date.now() - started}ms`);
   } catch (e) {
     res.writeHead(400, { 'content-type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: e.message }));

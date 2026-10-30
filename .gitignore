@@ -1,5 +1,2 @@
 # Personal settings (repository list, per-repository options)
 config.json
-# App window profile and server log (created by launcher.vbs)
-.app-profile/
-server.log
