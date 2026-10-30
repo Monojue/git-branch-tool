@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Git Branch Tool</title>
+<link rel="icon" type="image/png" href="/icon.png">
 <style>
 :root{
   --bg:#f6f6f3; --panel:#fff; --ink:#1c1c1a; --muted:#6b6a64; --faint:#9b9a93; --line:#e4e3dd; --hover:#f1f0ec;
@@ -1142,7 +1143,7 @@ const GUIDE = {
   en: [
     ['start', 'Getting started', `
       <ol>
-        <li>Double-click <code>start.bat</code> in the <code>git-tool</code> folder. A black window opens: keep it open while you use the tool. The tool opens in your browser at <code>http://localhost:4777</code>.</li>
+        <li>Double-click the <b>Git Branch Tool</b> icon on the Desktop (or find it in the Start menu). The tool opens in its own window and stops by itself about a minute after you close the window. No icon yet? Double-click <code>install-shortcuts.bat</code> in the <code>git-tool</code> folder once. (<code>start.bat</code> still works too: it opens the tool in the browser with a black console window.)</li>
         <li>Choose a repository: click the repository box at the top of the sidebar, then <b>Open</b> one from the recent list, type a folder path, or use <b>Browse folders…</b> (git repositories are marked 📦).</li>
         <li>Every time you open or reload the page, the tool runs <code>git fetch</code> first, so you always see the latest data from Backlog. Click <b>↻ Fetch latest git data</b> to refresh at any time.</li>
         <li>Switch the language (日本語 / English) and the theme at the bottom of the sidebar.</li>
@@ -1252,7 +1253,7 @@ git push</pre>
   ja: [
     ['start', 'はじめに', `
       <ol>
-        <li><code>git-tool</code> フォルダの <code>start.bat</code> をダブルクリックします。黒いウィンドウが開くので、使用中は閉じないでください。ブラウザで <code>http://localhost:4777</code> が開きます。</li>
+        <li>デスクトップの <b>Git Branch Tool</b> アイコンをダブルクリックします（スタートメニューからも起動できます）。専用のウィンドウで開き、ウィンドウを閉じると約1分後に自動で終了します。アイコンがない場合は、<code>git-tool</code> フォルダの <code>install-shortcuts.bat</code> を一度ダブルクリックしてください。（<code>start.bat</code> も引き続き使えます。黒いウィンドウ付きでブラウザに表示されます。）</li>
         <li>リポジトリを選びます。サイドバー上部のリポジトリ欄をクリックし、最近使った一覧から<b>開く</b>、フォルダのパスを入力、または<b>フォルダを参照…</b>（gitリポジトリには 📦 が付きます）から選択します。</li>
         <li>ページを開く・再読み込みするたびに、最初に <code>git fetch</code> を実行するので、常にBacklogの最新データが表示されます。<b>↻ 最新のgitデータを取得</b> でいつでも更新できます。</li>
         <li>言語（日本語 / English）とテーマはサイドバー下部で切り替えます。</li>
@@ -1487,6 +1488,8 @@ applyStatic();
 $('#btnRepo').addEventListener('click', () => openRepoDialog());
 const openReposAtStart = location.hash === '#repos';
 fetchAndLoad().then(() => { if (openReposAtStart && S.ov) openRepoDialog(); });
+// Tell the server this window is still open (in app mode it stops after the window is closed)
+setInterval(() => { fetch('/api/ping', { headers: { 'x-git-tool': '1' } }).catch(() => {}); }, 15000);
 </script>
 </body>
 </html>
