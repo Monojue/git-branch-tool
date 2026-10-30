@@ -15,7 +15,8 @@ The full guide is inside the tool: **📖 Guide / 使い方**.
 | macOS | Double-click `start.command` (first time: right-click → **Open**) |
 | Linux | `./start.sh` (or `sh start.sh`) |
 
-The tool opens at http://localhost:4777. Keep the console / terminal window open while you use it;
+The tool opens at http://localhost:4777. With `start.vbs` there is no window and nothing to stop.
+With `start.bat`, `start.command` or `start.sh`, keep the console / terminal window open while you use it;
 close it or press Ctrl+C to stop. Starting it again while it runs just opens the browser.
 
 If `./start.sh` or `start.command` is not allowed to run (for example after copying the folder from
@@ -45,7 +46,8 @@ gitリポジトリのブランチの状態（機能ブランチ、リリース�
 | macOS | `start.command` をダブルクリック（初回は右クリック →**開く**） |
 | Linux | `./start.sh`（または `sh start.sh`） |
 
-http://localhost:4777 で開きます。使用中はコンソール／ターミナルのウィンドウを閉じないでください
+http://localhost:4777 で開きます。`start.vbs` の場合はウィンドウがなく、終了操作も不要です。
+`start.bat`・`start.command`・`start.sh` の場合は、使用中はコンソール／ターミナルのウィンドウを閉じないでください
 （閉じるか Ctrl+C で終了）。起動中にもう一度起動すると、ブラウザで開くだけです。
 
 `./start.sh` や `start.command` が実行できない場合（Windowsからフォルダをコピーした場合など）は、
