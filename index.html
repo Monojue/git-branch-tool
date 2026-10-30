@@ -226,7 +226,7 @@ const I18N = {
     'lang.switch': '日本語', 'theme': '◐ Theme',
     'repo.change': 'Change', 'repo.title': 'Repositories', 'repo.recent': 'Recent repositories', 'repo.current': 'open',
     'repo.open': 'Open', 'repo.remove': 'Remove from list', 'repo.missing': 'folder not found',
-    'repo.add': 'Open another repository', 'repo.pathPh': 'Folder path, e.g. C:\\Users\\you\\git\\project', 'repo.browse': 'Browse folders…',
+    'repo.add': 'Open another repository', 'repo.pathPh': 'Folder path, e.g. {ex}', 'repo.browse': 'Browse folders…',
     'repo.up': '↑ Up', 'repo.home': 'Home', 'repo.noFolders': 'No folders here.', 'repo.isRepo': 'This folder is a git repository.', 'repo.openThis': 'Open this folder',
     'repo.settings': 'Settings for {name}', 'repo.remote': 'Remote', 'repo.main': 'Main branch',
     'repo.mainHint': 'Released code. Branches merged into it count as merged and can be deleted.',
@@ -386,7 +386,7 @@ const I18N = {
     'lang.switch': 'English', 'theme': '◐ テーマ',
     'repo.change': '変更', 'repo.title': 'リポジトリ', 'repo.recent': '最近使ったリポジトリ', 'repo.current': '使用中',
     'repo.open': '開く', 'repo.remove': '一覧から削除', 'repo.missing': 'フォルダが見つかりません',
-    'repo.add': '別のリポジトリを開く', 'repo.pathPh': 'フォルダのパス（例: C:\\Users\\you\\git\\project）', 'repo.browse': 'フォルダを参照…',
+    'repo.add': '別のリポジトリを開く', 'repo.pathPh': 'フォルダのパス（例: {ex}）', 'repo.browse': 'フォルダを参照…',
     'repo.up': '↑ 上へ', 'repo.home': 'ホーム', 'repo.noFolders': 'フォルダがありません。', 'repo.isRepo': 'このフォルダはgitリポジトリです。', 'repo.openThis': 'このフォルダを開く',
     'repo.settings': '{name} の設定', 'repo.remote': 'リモート', 'repo.main': 'メインブランチ',
     'repo.mainHint': 'リリース済みのコードです。ここにマージ済みのブランチは「マージ済み」として削除できます。',
@@ -1142,7 +1142,13 @@ const GUIDE = {
   en: [
     ['start', 'Getting started', `
       <ol>
-        <li>Double-click <code>start.bat</code> in the <code>git-tool</code> folder. A black window opens: keep it open while you use the tool. The tool opens in your browser at <code>http://localhost:4777</code>.</li>
+        <li>Start the tool from the <code>git-tool</code> folder. It opens in your browser at <code>http://localhost:4777</code>. Keep the console / terminal window open while you use it; close it (or press Ctrl+C) to stop.
+          <table><tbody>
+            <tr><td>Windows</td><td>Double-click <code>start.bat</code>.</td></tr>
+            <tr><td>macOS</td><td>Double-click <code>start.command</code>. The first time, right-click it → <b>Open</b> if macOS refuses to open it.</td></tr>
+            <tr><td>Linux</td><td>Run <code>./start.sh</code> in a terminal (or <code>sh start.sh</code>).</td></tr>
+          </tbody></table>
+          Needs Node.js and git 2.38 or newer.</li>
         <li>Choose a repository: click the repository box at the top of the sidebar, then <b>Open</b> one from the recent list, type a folder path, or use <b>Browse folders…</b> (git repositories are marked 📦).</li>
         <li>Every time you open or reload the page, the tool runs <code>git fetch</code> first, so you always see the latest data from Backlog. Click <b>↻ Fetch latest git data</b> to refresh at any time.</li>
         <li>Switch the language (日本語 / English) and the theme at the bottom of the sidebar.</li>
@@ -1242,17 +1248,24 @@ git push</pre>
       <p>The tool detects these when you open a repository for the first time and remembers them for each repository.</p>`],
     ['trouble', 'Troubleshooting', `
       <table><tbody>
-        <tr><td>Port 4777 is already in use</td><td>The tool is already running. Open <code>http://localhost:4777</code>, or close the other black window first.</td></tr>
+        <tr><td>"The tool is already running"</td><td>It is already open: the start script just opens the browser to it. To restart it, close the other console / terminal window first.</td></tr>
+        <tr><td>Nothing opens on macOS / Linux</td><td>Open <code>http://localhost:4777</code> in the browser yourself. If <code>./start.sh</code> is not allowed to run, use <code>sh start.sh</code> or run <code>chmod +x start.sh start.command</code> once.</td></tr>
         <tr><td>Fetch failed</td><td>Check the network / VPN, and that git can reach Backlog: run <code>git fetch</code> in a terminal and check your Backlog password.</td></tr>
         <tr><td>Not a git repository</td><td>Choose the project folder that contains the <code>.git</code> folder.</td></tr>
         <tr><td>Data looks old</td><td>Click <b>↻ Fetch latest git data</b>.</td></tr>
-        <tr><td>Something is missing after an update of the tool</td><td>Close the black window and start <code>start.bat</code> again.</td></tr>
+        <tr><td>Something is missing after an update of the tool</td><td>Close the console / terminal window and start the tool again.</td></tr>
       </tbody></table>`],
   ],
   ja: [
     ['start', 'はじめに', `
       <ol>
-        <li><code>git-tool</code> フォルダの <code>start.bat</code> をダブルクリックします。黒いウィンドウが開くので、使用中は閉じないでください。ブラウザで <code>http://localhost:4777</code> が開きます。</li>
+        <li><code>git-tool</code> フォルダからツールを起動します。ブラウザで <code>http://localhost:4777</code> が開きます。使用中はコンソール／ターミナルのウィンドウを閉じないでください（閉じるか Ctrl+C で終了します）。
+          <table><tbody>
+            <tr><td>Windows</td><td><code>start.bat</code> をダブルクリックします。</td></tr>
+            <tr><td>macOS</td><td><code>start.command</code> をダブルクリックします。初回に開けない場合は、右クリック →<b>開く</b> を選んでください。</td></tr>
+            <tr><td>Linux</td><td>ターミナルで <code>./start.sh</code>（または <code>sh start.sh</code>）を実行します。</td></tr>
+          </tbody></table>
+          Node.js と git 2.38 以降が必要です。</li>
         <li>リポジトリを選びます。サイドバー上部のリポジトリ欄をクリックし、最近使った一覧から<b>開く</b>、フォルダのパスを入力、または<b>フォルダを参照…</b>（gitリポジトリには 📦 が付きます）から選択します。</li>
         <li>ページを開く・再読み込みするたびに、最初に <code>git fetch</code> を実行するので、常にBacklogの最新データが表示されます。<b>↻ 最新のgitデータを取得</b> でいつでも更新できます。</li>
         <li>言語（日本語 / English）とテーマはサイドバー下部で切り替えます。</li>
@@ -1352,11 +1365,12 @@ git push</pre>
       <p>初めてリポジトリを開いたときに自動で設定され、リポジトリごとに保存されます。</p>`],
     ['trouble', '困ったときは', `
       <table><tbody>
-        <tr><td>Port 4777 is already in use</td><td>すでにツールが起動しています。<code>http://localhost:4777</code> を開くか、もう一方の黒いウィンドウを閉じてください。</td></tr>
+        <tr><td>「The tool is already running」</td><td>すでに起動しているため、ブラウザで開くだけです。再起動する場合は、先にもう一方のコンソール／ターミナルのウィンドウを閉じてください。</td></tr>
+        <tr><td>macOS / Linux で何も開かない</td><td>ブラウザで <code>http://localhost:4777</code> を開いてください。<code>./start.sh</code> が実行できない場合は <code>sh start.sh</code> を使うか、一度 <code>chmod +x start.sh start.command</code> を実行してください。</td></tr>
         <tr><td>取得に失敗しました</td><td>ネットワークやVPNを確認し、ターミナルで <code>git fetch</code> を実行してBacklogに接続できるか（パスワード等）確認してください。</td></tr>
         <tr><td>gitリポジトリではありません</td><td><code>.git</code> フォルダがあるプロジェクトのフォルダを選んでください。</td></tr>
         <tr><td>データが古い</td><td><b>↻ 最新のgitデータを取得</b> をクリックしてください。</td></tr>
-        <tr><td>ツール更新後に表示がおかしい</td><td>黒いウィンドウを閉じて、<code>start.bat</code> をもう一度起動してください。</td></tr>
+        <tr><td>ツール更新後に表示がおかしい</td><td>コンソール／ターミナルのウィンドウを閉じて、ツールをもう一度起動してください。</td></tr>
       </tbody></table>`],
   ],
 };
@@ -1416,7 +1430,7 @@ function renderRepoDialog(list) {
     <div class="ritem ${r.current ? 'cur' : ''}"><div class="grow"><b>${esc(r.name)}</b> ${r.current ? badge('b-info', t('repo.current')) : ''} ${r.exists ? '' : badge('b-bad', t('repo.missing'))}<div class="p">${esc(r.path)}</div></div>
     ${r.current ? '' : `<button class="btn sm primary" data-open="${esc(r.path)}" ${r.exists ? '' : 'disabled'}>${esc(t('repo.open'))}</button><button class="btn sm" data-forget="${esc(r.path)}" title="${esc(t('repo.remove'))}">✕</button>`}</div>`).join('')}</div>`;
   h += `<div class="dsec">${esc(t('repo.add'))}</div>
-    <div class="row"><input type="text" id="repoPathIn" placeholder="${esc(t('repo.pathPh'))}" style="flex:1;min-width:220px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit">
+    <div class="row"><input type="text" id="repoPathIn" placeholder="${esc(t('repo.pathPh', { ex: list.platform === 'win32' ? 'C:\\Users\\you\\git\\project' : (list.home || '/home/you') + '/git/project' }))}" style="flex:1;min-width:220px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit">
       <button class="btn primary" id="repoOpenPath">${esc(t('repo.open'))}</button><button class="btn" id="repoBrowse">${esc(t('repo.browse'))}</button></div>
     <div id="browser"></div>`;
   if (info) {

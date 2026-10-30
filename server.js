@@ -1,11 +1,12 @@
 // Git Branch Tool — local web UI for inspecting and cleaning up a repository.
 //
-//   node server.js            then open http://localhost:4777
+//   Windows: start.bat   macOS: start.command   Linux: ./start.sh
+//   (or: node server.js --open)   then the tool is at http://localhost:4777
 //
 // The repository can be switched from the page. config.json (written by the tool) keeps
 // the current repository, the recent list and per-repository settings:
-//   { "port": 4777, "current": "C:\\...\\my-app", "recent": [...],
-//     "repos": { "C:\\...\\my-app": { "remote": "origin", "main": "master",
+//   { "port": 4777, "current": "/path/to/my-app", "recent": [...],
+//     "repos": { "/path/to/my-app": { "remote": "origin", "main": "master",
 //                "envs": ["dev", "staging"], "checkPaths": ["src"] } } }
 // The older flat format ({ "repo": "../my-app", "main": ... }) is still read.
 //
@@ -410,7 +411,7 @@ async function selectRepo(dir) {
 }
 function repoList() {
   return {
-    current: CONF.current,
+    current: CONF.current, platform: process.platform, home: os.homedir(),
     repos: CONF.recent.map(p => ({ path: p, name: path.basename(p), current: p === CONF.current, exists: fs.existsSync(path.join(p, '.git')), settings: CONF.repos[p] || null })),
   };
 }
@@ -501,11 +502,33 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------- startup
+const URL_ = `http://localhost:${CONF.port}`;
+const OPEN = process.argv.includes('--open');      // open the browser (used by the start scripts)
+function openBrowser(url) {
+  const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]]
+    : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  try { const p = require('child_process').spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }); p.on('error', () => {}); p.unref(); }
+  catch (e) { /* no browser launcher available: the URL is printed below */ }
+}
+// merge-tree --write-tree (conflict checks) needs git 2.38 or newer
+execFile('git', ['--version'], { windowsHide: true }, (err, stdout) => {
+  if (err) { console.error('git was not found. Install git and make sure it is on the PATH.'); process.exit(1); }
+  const m = stdout.match(/(\d+)\.(\d+)/);
+  if (m && (+m[1] < 2 || (+m[1] === 2 && +m[2] < 38))) console.warn(`Warning: ${stdout.trim()} is older than 2.38; conflict checks will not work. Please update git.`);
+});
+
 if (CONF.current && CONF.repos[CONF.current] && fs.existsSync(path.join(CONF.current, '.git'))) useRepo(CONF.current);
 else console.log('No repository selected yet: choose one in the page.');
 server.on('error', e => {
-  if (e.code === 'EADDRINUSE') console.error(`Port ${CONF.port} is already in use. The tool is probably already running: open http://localhost:${CONF.port}`);
-  else console.error(e.message);
+  if (e.code === 'EADDRINUSE') {
+    console.log(`The tool is already running at ${URL_}`);
+    if (OPEN) { openBrowser(URL_); return setTimeout(() => process.exit(0), 500); }
+  } else console.error(e.message);
   process.exit(1);
 });
-server.listen(CONF.port, '127.0.0.1', () => console.log(`Git Branch Tool: http://localhost:${CONF.port}   repo: ${CFG ? CFG.repo : '(none)'}`));
+server.listen(CONF.port, '127.0.0.1', () => {
+  console.log(`Git Branch Tool: ${URL_}   repo: ${CFG ? CFG.repo : '(none)'}`);
+  console.log('Keep this window open while you use the tool. Stop it with Ctrl+C or by closing the window.');
+  if (OPEN) openBrowser(URL_);
+});

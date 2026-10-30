@@ -1,0 +1,4 @@
+# Line endings each platform expects
+*.sh      text eol=lf
+*.command text eol=lf
+*.bat     text eol=crlf
