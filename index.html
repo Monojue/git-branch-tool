@@ -82,6 +82,11 @@ details[open]>summary .chev{transform:rotate(90deg)}
 #netPanels .scroll.grabbing{cursor:grabbing}
 #netPanels .scroll circle.c{cursor:pointer}
 #netDetail:not(:empty){margin-top:16px}
+.selmark{pointer-events:none}
+.selmark .selring{fill:none;stroke:var(--accent);stroke-width:2.4}
+.selmark .selpulse{fill:var(--accent);fill-opacity:.18;stroke:var(--accent);stroke-opacity:.5;stroke-width:1;transform-box:fill-box;transform-origin:center;animation:selpulse 1.6s ease-out infinite}
+@keyframes selpulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.35);opacity:0}}
+@media (prefers-reduced-motion:reduce){.selmark .selpulse{animation:none;opacity:.5}}
 #netPanels{gap:16px}
 .ac{position:relative;flex:1 1 320px;min-width:200px;display:flex}
 .ac input{width:100%}
@@ -1472,7 +1477,8 @@ function drawNetwork(G, query) {
       } else sc.scrollLeft = sc.scrollWidth;
     }
     S.netKeep = null;
-    card.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit); });
+    markSelected(S.netSel);
+    card.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit, false, true); });
   }
 
   function commitFocus(c) {
@@ -1491,6 +1497,7 @@ function drawCompare(G, since, buildView, layout, panel, main) {
   const box = $('#netPanels'); box.innerHTML = ''; box.append(a.el, b.el);
   [a, b].forEach(p => { if (!p.keep()) p.sc.scrollLeft = p.sc.scrollWidth; });
   S.netKeep = null;
+  markSelected(S.netSel);
   let lock = false;
   const sync = (s, d) => s.addEventListener('scroll', () => { if (lock) return; lock = true; d.scrollLeft = d.scrollWidth - d.clientWidth - (s.scrollWidth - s.clientWidth - s.scrollLeft); lock = false; });
   sync(a.sc, b.sc); sync(b.sc, a.sc);
@@ -1505,8 +1512,27 @@ function containingRefs(G, h) {
   const refs = G.refs.map(r => ({ name: sh(r.name), h: r.h })).concat(G.tags.map(x => ({ name: x.name, h: x.h, tag: true })));
   return { in: refs.filter(r => desc.has(r.h)), out: refs.filter(r => !desc.has(r.h)) };
 }
-async function showCommit(h, scroll) {
+// Mark the selected commit in every graph on the page (a ring around its dot)
+function markSelected(h, reveal) {
+  document.querySelectorAll('#netPanels .selmark').forEach(x => x.remove());
+  if (!h) return;
+  document.querySelectorAll(`#netPanels circle.c[data-h^="${h.slice(0, 12)}"]`).forEach(dot => {
+    const svg = dot.ownerSVGElement, NS = 'http://www.w3.org/2000/svg', cx = dot.getAttribute('cx'), cy = dot.getAttribute('cy'), r = +dot.getAttribute('r');
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'selmark');
+    [['selpulse', r * 3.2], ['selring', r * 2.2]].forEach(([cls, rr]) => {
+      const c = document.createElementNS(NS, 'circle'); c.setAttribute('class', cls); c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', rr); g.appendChild(c);
+    });
+    svg.appendChild(g);
+    if (reveal) {                                // bring it into view inside its scroll area
+      const sc = svg.closest('.scroll'), d = dot.getBoundingClientRect(), s = sc.getBoundingClientRect();
+      if (d.left < s.left + 40 || d.right > s.right - 40) sc.scrollLeft += d.left - s.left - sc.clientWidth / 2;
+      if (d.top < s.top + 20 || d.bottom > s.bottom - 20) sc.scrollTop += d.top - s.top - sc.clientHeight / 2;
+    }
+  });
+}
+async function showCommit(h, scroll, reveal) {
   const box = $('#netDetail'); if (!box) return;
+  S.netSel = h; markSelected(h, reveal);
   box.innerHTML = `<div class="section"><div class="loading">${spin(t('loading'))}</div></div>`;
   if (!scroll) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   let c; try { c = await api('/api/commit?h=' + encodeURIComponent(h)); } catch (e) { box.innerHTML = `<div class="section"><pre class="log">${esc(e.message)}</pre></div>`; return; }
@@ -1532,8 +1558,8 @@ async function showCommit(h, scroll) {
       <div><b>${esc(t('n.c.files', { n: c.fileCount }))}</b>${c.parents.length > 1 ? `<div class="small muted">${esc(t('n.c.mergeFiles'))}</div>` : ''}
         ${c.files.length ? `<table style="margin-top:4px"><tbody>${c.files.map(f => `<tr><td class="mono">${esc(f.path)}</td><td class="nw" style="color:var(--ok)">+${esc(f.add)}</td><td class="nw" style="color:var(--bad)">−${esc(f.del)}</td></tr>`).join('')}</tbody></table>` : `<div class="small muted">—</div>`}</div>
     </div></div>`;
-  $('#ncClose').onclick = () => { box.innerHTML = ''; };
-  box.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit); });
+  $('#ncClose').onclick = () => { box.innerHTML = ''; S.netSel = null; markSelected(null); };
+  box.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit, false, true); });
 }
 
 // ============================================================ guide
@@ -1788,7 +1814,7 @@ function vGuide() {
 }
 
 // ============================================================ repositories
-function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); S.lcOpen = {}; S.netQuery = ''; }
+function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); S.lcOpen = {}; S.netQuery = ''; S.netSel = null; }
 // Always start from the latest git data: fetch from the remote first, then read the repository.
 async function fetchAndLoad() {
   $('#main').innerHTML = `<div class="loading">${spin(t('loadingFetch'))}</div>`;
