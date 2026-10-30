@@ -410,7 +410,7 @@ const I18N = {
     'n.branchesT': 'After deleting branches', 'n.branchesD': 'Merged branches deleted and old releases kept as tags. History is unchanged.',
     'n.simulated': 'simulated',
     'n.s.ph': 'Search a branch, ticket number or commit hash (e.g. 1131, release/20261030, e945084b)', 'n.s.btn': 'Show', 'n.s.clear': 'Show everything',
-    'n.s.hint': '/ = search · graph: wheel = zoom, drag = move', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
+    'n.s.hint': '/ = search · graph: Ctrl + wheel = zoom, drag = move', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
     'n.f.graphT': 'History of {b}', 'n.f.graphD': 'The branch in bold: its own commits, where it started from {main} (base), and where it was merged (→). Click a dot for details.',
     'n.f.fp': 'This branch is part of {main}\'s own line (merged by fast-forward), so its commits since the previous release or tag are shown (at most 25). Click a dot for details.',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '(old)', 'n.f.times': p => `${p.n} times`,
@@ -422,7 +422,7 @@ const I18N = {
     'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
-    'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: mouse wheel over the graph (or these buttons). Drag to move, Shift + wheel to scroll sideways.',
+    'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: Ctrl + mouse wheel over the graph (or these buttons). Drag to move, Shift + wheel to scroll sideways.',
     'n.f.ctxD': 'Other branches are faded; drag the scroll bars or zoom to look around.',
     'n.f.offshoots': 'Work started on top of this branch', 'n.f.offshootsD': 'Commits made directly on top of this branch somewhere else. That work depends on this branch.',
     'n.c.title': 'Commit', 'n.c.copy': 'Copy hash', 'n.c.in': 'Contained in', 'n.c.inNone': 'No branch or tag contains this commit.',
@@ -590,7 +590,7 @@ const I18N = {
     'n.branchesT': 'ブランチ削除後', 'n.branchesD': 'マージ済みブランチを削除し、古いリリースをタグとして残した状態です。履歴自体は変わりません。',
     'n.simulated': 'シミュレーション',
     'n.s.ph': 'ブランチ名・チケット番号・コミットハッシュで検索（例: 1131、release/20261030、e945084b）', 'n.s.btn': '表示', 'n.s.clear': 'すべて表示',
-    'n.s.hint': '/ で検索 · グラフ: ホイールでズーム、ドラッグで移動', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
+    'n.s.hint': '/ で検索 · グラフ: Ctrl + ホイールでズーム、ドラッグで移動', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
     'n.f.graphT': '{b} の履歴', 'n.f.graphD': '太線がこのブランチです: 自分のコミット、{main} のどこから作成したか（base）、どこにマージされたか（→）。点をクリックすると詳細を表示します。',
     'n.f.fp': 'このブランチは（fast-forward でマージされ）{main} 自体の履歴の一部なので、前回のリリースまたはタグ以降のコミットを表示しています（最大 25 件）。点をクリックすると詳細を表示します。',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '（古い版）', 'n.f.times': '{n} 回',
@@ -602,7 +602,7 @@ const I18N = {
     'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
-    'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: グラフ上でマウスホイール（またはこのボタン）。ドラッグで移動、Shift + ホイールで横スクロール。',
+    'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: グラフ上で Ctrl + マウスホイール（またはこのボタン）。ドラッグで移動、Shift + ホイールで横スクロール。',
     'n.f.ctxD': '他のブランチは薄く表示しています。スクロールやズームで周りも確認できます。',
     'n.f.offshoots': 'このブランチの上で始まった作業', 'n.f.offshootsD': 'このブランチの上に直接作られた別のコミットです。その作業はこのブランチに依存しています。',
     'n.c.title': 'コミット', 'n.c.copy': 'ハッシュをコピー', 'n.c.in': '含まれている', 'n.c.inNone': 'このコミットを含むブランチ・タグはありません。',
@@ -1309,10 +1309,13 @@ function drawNetwork(G, query) {
     zoomGroup.push({ key, apply: zoomTo });
     el.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => { const d = +b.dataset.zoom; zoomTo(d === 0 ? 1 : cur * (d > 0 ? 1.25 : 0.8)); });
     sc.addEventListener('wheel', ev => {
-      ev.preventDefault(); tip.style.display = 'none';
-      if (ev.shiftKey) { sc.scrollLeft += ev.deltaY || ev.deltaX; return; }
-      const r = sc.getBoundingClientRect();
-      zoomTo(cur * Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top);
+      if (ev.ctrlKey) {                          // Ctrl + wheel: zoom at the pointer
+        ev.preventDefault(); tip.style.display = 'none';
+        const r = sc.getBoundingClientRect();
+        zoomTo(cur * Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top);
+      } else if (ev.shiftKey) {                  // Shift + wheel: scroll sideways
+        ev.preventDefault(); sc.scrollLeft += ev.deltaY || ev.deltaX;
+      }                                          // plain wheel: normal scrolling
     }, { passive: false });
     const keep = () => {                         // after a zoom: restore the spot that was in the middle
       if (!S.netKeep) return false;
