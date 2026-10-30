@@ -483,10 +483,29 @@ const ROUTES = {
   'POST /api/delete-local': (q, b) => deleteLocal(b.branches || []),
 };
 
+// --auto-stop (used by start.vbs, which runs without a console window): stop when the browser is closed.
+// Every open page keeps one event-stream connection; when the last one closes, stop after a short grace
+// period (a page reload reconnects within it). If no page connects within 2 minutes after start, stop too.
+const AUTO_STOP = process.argv.includes('--auto-stop');
+let alivePages = 0, stopTimer = null;
+const scheduleStop = ms => {
+  clearTimeout(stopTimer);
+  stopTimer = setTimeout(() => { if (alivePages === 0) { console.log('Browser closed: stopping.'); process.exit(0); } }, ms);
+};
+if (AUTO_STOP) scheduleStop(120000);
+
 const server = http.createServer(async (req, res) => {
   const host = (req.headers.host || '').split(':')[0];
   if (!['localhost', '127.0.0.1'].includes(host)) { res.writeHead(403); return res.end('forbidden'); }
   const url = new URL(req.url, 'http://localhost');
+  if (req.method === 'GET' && url.pathname === '/api/alive') {   // the page's "still open" connection
+    res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
+    res.write('retry: 2000\n\n');
+    alivePages++; clearTimeout(stopTimer);
+    const beat = setInterval(() => res.write(': alive\n\n'), 25000);
+    req.on('close', () => { clearInterval(beat); alivePages--; if (AUTO_STOP && alivePages === 0) scheduleStop(15000); });
+    return;
+  }
   if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
     return res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
@@ -544,6 +563,7 @@ server.on('error', e => {
 });
 server.listen(CONF.port, '127.0.0.1', () => {
   console.log(`Git Branch Tool: ${URL_}   repo: ${CFG ? CFG.repo : '(none)'}`);
-  console.log('Keep this window open while you use the tool. Stop it with Ctrl+C or by closing the window.');
+  console.log(AUTO_STOP ? 'Running in the background; it stops by itself when the browser tab is closed.'
+    : 'Keep this window open while you use the tool. Stop it with Ctrl+C or by closing the window.');
   if (OPEN) openBrowser(URL_);
 });

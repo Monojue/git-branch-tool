@@ -1,2 +1,4 @@
 # Personal settings (repository list, per-repository options)
 config.json
+# Output of the hidden server (start.vbs)
+server.log

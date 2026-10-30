@@ -11,7 +11,7 @@ The full guide is inside the tool: **📖 Guide / 使い方**.
 ## Start
 | OS | How |
 |---|---|
-| Windows | Double-click `start.bat` |
+| Windows | Double-click `start.vbs`: no console window; stops by itself when you close the browser tab (`start.bat`: same, with a console window) |
 | macOS | Double-click `start.command` (first time: right-click → **Open**) |
 | Linux | `./start.sh` (or `sh start.sh`) |
 
@@ -41,7 +41,7 @@ gitリポジトリのブランチの状態（機能ブランチ、リリース�
 ## 起動方法
 | OS | 方法 |
 |---|---|
-| Windows | `start.bat` をダブルクリック |
+| Windows | `start.vbs` をダブルクリック（コンソールなし。ブラウザのタブを閉じると自動で終了。`start.bat` はコンソール付き） |
 | macOS | `start.command` をダブルクリック（初回は右クリック →**開く**） |
 | Linux | `./start.sh`（または `sh start.sh`） |
 

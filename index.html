@@ -1622,7 +1622,7 @@ const GUIDE = {
       <ol>
         <li>Start the tool from the <code>git-tool</code> folder. It opens in your browser at <code>http://localhost:4777</code>. Keep the console / terminal window open while you use it; close it (or press Ctrl+C) to stop.
           <table><tbody>
-            <tr><td>Windows</td><td>Double-click <code>start.bat</code>.</td></tr>
+            <tr><td>Windows</td><td>Double-click <code>start.vbs</code> (or the pinned icon): no console window, and the tool stops by itself shortly after you close its browser tab. <code>start.bat</code> does the same with a console window, for troubleshooting.</td></tr>
             <tr><td>macOS</td><td>Double-click <code>start.command</code>. The first time, right-click it → <b>Open</b> if macOS refuses to open it.</td></tr>
             <tr><td>Linux</td><td>Run <code>./start.sh</code> in a terminal (or <code>sh start.sh</code>).</td></tr>
           </tbody></table>
@@ -1739,7 +1739,7 @@ git push</pre>
       <ol>
         <li><code>git-tool</code> フォルダからツールを起動します。ブラウザで <code>http://localhost:4777</code> が開きます。使用中はコンソール／ターミナルのウィンドウを閉じないでください（閉じるか Ctrl+C で終了します）。
           <table><tbody>
-            <tr><td>Windows</td><td><code>start.bat</code> をダブルクリックします。</td></tr>
+            <tr><td>Windows</td><td><code>start.vbs</code>（またはピン留めしたアイコン）をダブルクリックします。コンソールウィンドウは表示されず、ブラウザのタブを閉じると少し後に自動で終了します。<code>start.bat</code> はコンソールウィンドウ付きで同じ動作をします（トラブル調査用）。</td></tr>
             <tr><td>macOS</td><td><code>start.command</code> をダブルクリックします。初回に開けない場合は、右クリック →<b>開く</b> を選んでください。</td></tr>
             <tr><td>Linux</td><td>ターミナルで <code>./start.sh</code>（または <code>sh start.sh</code>）を実行します。</td></tr>
           </tbody></table>
@@ -1979,6 +1979,8 @@ applyStatic();
 $('#btnRepo').addEventListener('click', () => openRepoDialog());
 const openReposAtStart = location.hash === '#repos';
 fetchAndLoad().then(() => { if (openReposAtStart && S.ov) openRepoDialog(); });
+// Keep one connection open while this page is open; the hidden server (start.vbs) stops when the last one closes
+try { new EventSource('/api/alive'); } catch (e) {}
 </script>
 </body>
 </html>
