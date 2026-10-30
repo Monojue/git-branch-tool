@@ -63,6 +63,17 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .lc-card>summary{gap:8px}.lc-card[open]>summary{margin-bottom:6px}
 .lc-when{color:var(--muted);margin-top:4px}
 .lc-sum>.chev{align-self:flex-start;margin-top:3px}
+.net-search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.net-search input{flex:1 1 320px;min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
+.net-search input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.kv{display:grid;gap:6px}
+.kv>div{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:baseline}
+.kv>div>span{color:var(--muted);font-size:12.5px}.kv>div>b{font-weight:400;min-width:0;word-break:break-word}
+@media (max-width:640px){.kv>div{grid-template-columns:1fr}}
+.netsvg .intol rect{fill:var(--ok-bg);stroke:var(--ok)}.netsvg .intol text{fill:var(--ok)}
+.netsvg .intoold rect{fill:var(--warn-bg);stroke:var(--warn)}.netsvg .intoold text{fill:var(--warn)}
+.netsvg .basel rect{fill:var(--chip);stroke:var(--faint)}.netsvg .basel text{fill:var(--muted)}
+.netsvg .sell rect{fill:var(--accent);stroke:var(--accent)}.netsvg .sell text{fill:#fff;font-weight:700}
 .lc-sum .lc-ic{font-size:20px;line-height:1.2}.lc-sum ul{margin:4px 0;padding-left:18px}
 .lc-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
 .lc-card p{margin:6px 0}
@@ -381,6 +392,24 @@ const I18N = {
     'n.fullD': 'Merged branches deleted, releases as tags, unreleased features rebased onto {main}, and environment branches rebuilt as {main} + one merge per feature. Dashed = simulated.',
     'n.branchesT': 'After deleting branches', 'n.branchesD': 'Merged branches deleted and old releases kept as tags. History is unchanged.',
     'n.simulated': 'simulated',
+    'n.s.ph': 'Search a branch, ticket number or commit hash (e.g. 1131, release/20261030, e945084b)', 'n.s.btn': 'Show', 'n.s.clear': 'Show everything',
+    'n.s.hint': 'Press / to search', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
+    'n.f.graphT': 'History of {b}', 'n.f.graphD': 'Only this branch: its own commits, where it started from {main} (base), and where it was merged (→). Click a dot for details.',
+    'n.f.fp': 'This branch is part of {main}\'s own line (merged by fast-forward), so its commits since the previous release or tag are shown (at most 25). Click a dot for details.',
+    'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '(old)', 'n.f.times': p => `${p.n} times`,
+    'n.f.released': 'released: in {main}', 'n.f.notReleased': 'not in {main} yet', 'n.f.conflicts': p => `conflicts with ${p.main}: ${pl(p.n, 'file', 'files')}`,
+    'n.f.base': 'Created from {main}', 'n.f.commits': 'Commits', 'n.f.commitsV': p => `${pl(p.n, 'own commit', 'own commits')}${p.m ? ` + ${pl(p.m, 'merge', 'merges')}` : ''}`,
+    'n.f.authors': 'Authors', 'n.f.last': 'Latest commit',
+    'n.f.into': 'Merged into', 'n.f.intoNone': 'Not merged into any other branch yet.',
+    'n.f.th.target': 'Branch', 'n.f.th.when': 'First merged', 'n.f.th.commit': 'Last merge', 'n.f.th.version': 'Version there',
+    'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
+    'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
+    'n.f.checkout': 'Check out this branch:',
+    'n.f.offshoots': 'Work started on top of this branch', 'n.f.offshootsD': 'Commits made directly on top of this branch somewhere else. That work depends on this branch.',
+    'n.c.title': 'Commit', 'n.c.copy': 'Copy hash', 'n.c.in': 'Contained in', 'n.c.inNone': 'No branch or tag contains this commit.',
+    'n.c.notIn': 'Not in', 'n.c.parents': 'Parents', 'n.c.files': p => `Changed files (${p.n})`,
+    'n.c.mergeFiles': 'For a merge: what it brought in, compared with its first parent.',
+    'f.showNet': 'Show in network',
   },
   ja: {
     'lang.switch': 'English', 'theme': '◐ テーマ',
@@ -541,6 +570,24 @@ const I18N = {
     'n.fullD': 'マージ済みブランチを削除し、リリースをタグ化、未リリースの機能ブランチを {main} にリベースし、環境ブランチを {main} + 機能ブランチごとに1マージで再構築した状態です。点線はシミュレーションです。',
     'n.branchesT': 'ブランチ削除後', 'n.branchesD': 'マージ済みブランチを削除し、古いリリースをタグとして残した状態です。履歴自体は変わりません。',
     'n.simulated': 'シミュレーション',
+    'n.s.ph': 'ブランチ名・チケット番号・コミットハッシュで検索（例: 1131、release/20261030、e945084b）', 'n.s.btn': '表示', 'n.s.clear': 'すべて表示',
+    'n.s.hint': '/ キーで検索', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
+    'n.f.graphT': '{b} の履歴', 'n.f.graphD': 'このブランチだけを表示しています: 自分のコミット、{main} のどこから作成したか（base）、どこにマージされたか（→）。点をクリックすると詳細を表示します。',
+    'n.f.fp': 'このブランチは（fast-forward でマージされ）{main} 自体の履歴の一部なので、前回のリリースまたはタグ以降のコミットを表示しています（最大 25 件）。点をクリックすると詳細を表示します。',
+    'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '（古い版）', 'n.f.times': '{n} 回',
+    'n.f.released': 'リリース済み（{main} に含まれる）', 'n.f.notReleased': '{main} に未反映', 'n.f.conflicts': '{main} とコンフリクト: {n} ファイル',
+    'n.f.base': '{main} から作成', 'n.f.commits': 'コミット', 'n.f.commitsV': p => `自分のコミット ${p.n} 件${p.m ? ` + マージ ${p.m} 件` : ''}`,
+    'n.f.authors': '作成者', 'n.f.last': '最新コミット',
+    'n.f.into': 'マージ先', 'n.f.intoNone': 'まだどのブランチにもマージされていません。',
+    'n.f.th.target': 'ブランチ', 'n.f.th.when': '初回マージ', 'n.f.th.commit': '最後のマージ', 'n.f.th.version': '入っている版',
+    'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
+    'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
+    'n.f.checkout': 'このブランチをチェックアウト:',
+    'n.f.offshoots': 'このブランチの上で始まった作業', 'n.f.offshootsD': 'このブランチの上に直接作られた別のコミットです。その作業はこのブランチに依存しています。',
+    'n.c.title': 'コミット', 'n.c.copy': 'ハッシュをコピー', 'n.c.in': '含まれている', 'n.c.inNone': 'このコミットを含むブランチ・タグはありません。',
+    'n.c.notIn': '含まれていない', 'n.c.parents': '親コミット', 'n.c.files': '変更されたファイル（{n}）',
+    'n.c.mergeFiles': 'マージの場合: 1つ目の親と比べて、このマージで入った変更です。',
+    'f.showNet': 'ネットワークで表示',
   },
 };
 // Server messages are English; translate the known ones.
@@ -548,7 +595,7 @@ const SERVER_MSG_JA = [
   [/^Refused, not merged into (\S+) \(or protected\): /, '拒否しました。$1 に未マージ、または保護されたブランチです: '],
   [/^Refused, not a merged release branch: /, '拒否しました。マージ済みのリリースブランチではありません: '],
   [/^Refused, not merged or protected: /, '拒否しました。未マージ、または保護されたブランチです: '],
-  [/^unknown branch /, '不明なブランチ: '], [/^unknown environment /, '不明な環境: '], [/^Nothing selected\.$/, '何も選択されていません。'],
+  [/^unknown commit /, '不明なコミット: '], [/^unknown branch /, '不明なブランチ: '], [/^unknown environment /, '不明な環境: '], [/^Nothing selected\.$/, '何も選択されていません。'],
   [/^Folder not found: /, 'フォルダが見つかりません: '], [/^Not a git repository: /, 'gitリポジトリではありません: '],
   [/^This repository has no remote: /, 'このリポジトリにはリモートがありません: '], [/^No branches found on the remote: /, 'リモートにブランチがありません: '],
   [/^No repository selected$/, 'リポジトリが選択されていません'], [/^Cannot remove the repository that is open$/, '使用中のリポジトリは一覧から削除できません'],
@@ -753,6 +800,7 @@ function vFeatures() {
   $('#main').querySelectorAll('[data-row]').forEach(tr => tr.addEventListener('click', () => {
     const k = tr.dataset.row; S.openRows.has(k) ? S.openRows.delete(k) : S.openRows.add(k); vFeatures();
   }));
+  $('#main').querySelectorAll('[data-netshow]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); S.netQuery = b.dataset.netshow; show('network'); }));
   $('#btnPairs').addEventListener('click', async () => {
     const b = $('#btnPairs'); b.disabled = true; b.innerHTML = spin(t('f.pairsRunning'));
     try { S.results.featureConflicts = await api('/api/feature-conflicts'); } catch (e) { toast(e.message); }
@@ -763,6 +811,7 @@ function featureDetail(f) {
   const ov = S.ov, main = ov.main;
   const cmd = `git checkout ${f.short}\ngit fetch && git rebase ${ov.remote}/${main}\ngit push --force-with-lease`;
   return `<div class="grid" style="gap:10px;padding:4px 0">
+    <div><button class="btn sm" data-netshow="${esc(f.short)}">🔎 ${esc(t('f.showNet'))}</button></div>
     ${f.conflicts && f.conflicts.length ? `<div><b>${esc(t('f.d.conflicts', { main }))}</b> ${esc(t('f.d.conflictsD'))}<ul class="files">${f.conflicts.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
     ${f.behind > 0 ? `<div><b>${esc(t('f.d.update', { main }))}</b> ${esc(t('f.d.updateD', { n: f.ahead }))}${copyBtn(cmd)}</div>` : `<div class="muted">${esc(t('f.d.based', { main }))}</div>`}
     <div><b>${esc(t('f.d.commits'))}</b><table style="margin-top:4px"><tbody>${f.commits.map(c => `<tr><td class="mono">${esc(c.h)}</td><td class="nw">${esc(c.d)}</td><td>${esc(c.a)}</td><td>${esc(c.s)}</td></tr>`).join('')}</tbody></table></div>
@@ -1016,21 +1065,44 @@ function confirmRun({ title, items, note, typed, danger, run }) {
 const NET = { range: 3, after: 'full', labels: true };
 try { Object.assign(NET, JSON.parse(localStorage.getItem('gbt-net') || '{}')); } catch (e) {}
 async function vNetwork() {
-  $('#main').innerHTML = topbar(t('n.title')) + `<div class="net-controls">
+  const q = S.netQuery || '';
+  $('#main').innerHTML = topbar(t('n.title')) + `
+    <div class="net-search">
+      <input type="search" id="nSearch" list="nSearchList" value="${esc(q)}" placeholder="${esc(t('n.s.ph'))}" autocomplete="off">
+      <button class="btn primary" id="nGo">${esc(t('n.s.btn'))}</button>
+      ${q ? `<button class="btn" id="nClear">${esc(t('n.s.clear'))}</button>` : ''}
+      <span class="small muted">${esc(t('n.s.hint'))}</span>
+      <datalist id="nSearchList"></datalist>
+    </div>
+    ${q ? '' : `<div class="net-controls">
       <div><span class="small muted">${esc(t('n.period'))} </span><div class="seg" id="nRange">${[[1, 'n.m1'], [3, 'n.m3'], [6, 'n.m6'], [0, 'n.all']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${NET.range === v}">${esc(t(k))}</button>`).join('')}</div></div>
       <div><span class="small muted">${esc(t('n.compare'))} </span><div class="seg" id="nAfter">${[['branches', 'n.branches'], ['full', 'n.full']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${NET.after === v}">${esc(t(k))}</button>`).join('')}</div></div>
-      <label class="chk small"><input type="checkbox" id="nLabels" ${NET.labels ? 'checked' : ''}> ${esc(t('n.labels'))}</label></div>
-    <div class="grid" id="netPanels"><div class="loading">${spin(t('n.building'))}</div></div>`;
+      <label class="chk small"><input type="checkbox" id="nLabels" ${NET.labels ? 'checked' : ''}> ${esc(t('n.labels'))}</label></div>`}
+    <div class="grid" id="netPanels"><div class="loading">${spin(t('n.building'))}</div></div>
+    <div id="netDetail"></div>`;
   const save = () => { try { localStorage.setItem('gbt-net', JSON.stringify(NET)); } catch (e) {} };
-  $('#nRange').onclick = e => { const b = e.target.closest('button'); if (b) { NET.range = +b.dataset.v; save(); vNetwork(); } };
-  $('#nAfter').onclick = e => { const b = e.target.closest('button'); if (b) { NET.after = b.dataset.v; save(); vNetwork(); } };
-  $('#nLabels').onchange = e => { NET.labels = e.target.checked; save(); vNetwork(); };
+  const search = v => { S.netQuery = (v || '').trim(); vNetwork(); };
+  $('#nGo').onclick = () => search($('#nSearch').value);
+  $('#nSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value); if (e.key === 'Escape') search(''); };
+  $('#nSearch').onchange = e => { if (S.graph && S.graph.refs.some(r => r.name.endsWith('/' + e.target.value))) search(e.target.value); };
+  if ($('#nClear')) $('#nClear').onclick = () => search('');
+  if (!q) {
+    $('#nRange').onclick = e => { const b = e.target.closest('button'); if (b) { NET.range = +b.dataset.v; save(); vNetwork(); } };
+    $('#nAfter').onclick = e => { const b = e.target.closest('button'); if (b) { NET.after = b.dataset.v; save(); vNetwork(); } };
+    $('#nLabels').onchange = e => { NET.labels = e.target.checked; save(); vNetwork(); };
+  }
   if (!S.graph) { try { S.graph = await api('/api/graph'); } catch (e) { $('#netPanels').innerHTML = `<pre class="log">${esc(e.message)}</pre>`; return; } }
   if (S.tab !== 'network') return;
-  drawNetwork(S.graph);
+  const P = S.graph.plan, sh = n => n.replace(new RegExp('^' + P.remote + '/'), '');
+  $('#nSearchList').innerHTML = S.graph.refs.map(r => `<option value="${esc(sh(r.name))}">`).join('') + S.graph.tags.map(x => `<option value="${esc(x.name)}">`).join('');
+  drawNetwork(S.graph, q);
 }
+// "/" jumps to the search box on the Network screen
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && S.tab === 'network' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); const i = $('#nSearch'); if (i) { i.focus(); i.select(); } }
+});
 
-function drawNetwork(G) {
+function drawNetwork(G, query) {
   const byHash = new Map(G.commits.map(c => [c.h, c]));
   const P = G.plan, short = n => n.replace(new RegExp('^' + P.remote + '/'), '');
   const main = short(P.main);
@@ -1107,13 +1179,14 @@ function drawNetwork(G) {
       for (const [h, ls] of [...byH].sort((a, b) => X(a[0]) - X(b[0]))) {
         const x = X(h), cl = col(L.laneOf.get(h));
         ls.forEach(l => { const w = l.name.length * 6.2 + 8; let ly = Y(L.laneOf.get(h)) - 7; while (hit(x + 6, ly, w) && ly > 26) ly -= 13; placed.push({ x: x + 6, y: ly, w });
-          s += `<g class="lbl ${l.type === 'tag' ? 'tagl' : ''}"><rect x="${x + 6}" y="${ly - 9}" width="${w}" height="12" rx="3" ${l.type === 'tag' ? '' : `stroke="${cl}"`}/><text x="${x + 10}" y="${ly}" ${l.type === 'tag' ? '' : `fill="${cl}"`}>${esc(l.name)}</text></g>`; });
+          const plain = l.type === 'branch', cls = { tag: 'tagl', into: 'intol', intoOld: 'intoold', base: 'basel', sel: 'sell' }[l.type] || '';
+          s += `<g class="lbl ${cls}"><rect x="${x + 6}" y="${ly - 9}" width="${w}" height="12" rx="3" ${plain ? `stroke="${cl}"` : ''}/><text x="${x + 10}" y="${ly}" ${plain ? `fill="${cl}"` : ''}>${esc(l.name)}</text></g>`; });
       }
       s += '</g>';
     }
     s += '</svg>';
     const el = document.createElement('div'); el.className = 'section';
-    el.innerHTML = `<header><h2>${esc(title)}</h2><div class="stats"><span class="stat">${esc(t('n.st.branches'))} <b>${st.branches}</b>${dl('branches')}</span><span class="stat">${esc(t('n.st.tags'))} <b>${st.tags}</b>${dl('tags', false)}</span><span class="stat">${esc(t('n.st.commits'))} <b>${st.commits}</b>${dl('commits')}</span><span class="stat">${esc(t('n.st.merges'))} <b>${st.merges}</b>${dl('merges')}</span><span class="stat">${esc(t('n.st.lanes'))} <b>${st.lanes}</b>${dl('lanes')}</span></div><div class="hint">${esc(desc)}</div></header><div class="scroll">${s}</div>`;
+    el.innerHTML = `<header><h2>${esc(title)}</h2><div class="stats" ${view.focus ? 'hidden' : ''}><span class="stat">${esc(t('n.st.branches'))} <b>${st.branches}</b>${dl('branches')}</span><span class="stat">${esc(t('n.st.tags'))} <b>${st.tags}</b>${dl('tags', false)}</span><span class="stat">${esc(t('n.st.commits'))} <b>${st.commits}</b>${dl('commits')}</span><span class="stat">${esc(t('n.st.merges'))} <b>${st.merges}</b>${dl('merges')}</span><span class="stat">${esc(t('n.st.lanes'))} <b>${st.lanes}</b>${dl('lanes')}</span></div><div class="hint">${esc(desc)}</div></header><div class="scroll">${s}</div>`;
     const sc = el.querySelector('.scroll'), tip = $('#tip');
     sc.addEventListener('mousemove', ev => {
       const tg = ev.target.closest('circle.c'); if (!tg) { tip.style.display = 'none'; return; }
@@ -1124,8 +1197,143 @@ function drawNetwork(G) {
       tip.style.top = (ev.clientY + 16 + tip.offsetHeight > innerHeight ? ev.clientY - tip.offsetHeight - 10 : ev.clientY + 16) + 'px';
     });
     sc.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+    sc.addEventListener('click', ev => { const tg = ev.target.closest('circle.c'); if (tg && !tg.dataset.h.startsWith('sim-')) showCommit(tg.dataset.h); });
     return { el, st, sc };
   }
+  if (!query) return drawCompare(G, since, buildView, layout, panel, main);
+
+  // ---------- search: one branch, or one commit
+  function resolve(q) {
+    const lq = q.toLowerCase();
+    const refs = G.refs.map(r => ({ name: short(r.name), h: r.h })).concat(G.tags.map(x => ({ name: x.name, h: x.h, tag: true })));
+    const exact = refs.find(r => r.name.toLowerCase() === lq);
+    if (exact) return { branch: exact };
+    const some = refs.filter(r => r.name.toLowerCase().includes(lq));
+    // a ticket number like 1131 should not also match 11310
+    const strict = some.filter(r => new RegExp('(^|[^0-9])' + lq.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^0-9])').test(r.name.toLowerCase()));
+    const m = strict.length ? strict : some;
+    if (m.length === 1) return { branch: m[0] };
+    if (/^[0-9a-f]{4,40}$/.test(lq)) { const c = G.commits.find(x => x.h.startsWith(lq)); if (c) return { commit: c }; }
+    if (m.length > 1) return { many: m };
+    return { none: true };
+  }
+  function focusView(q) {
+    const box = $('#netPanels'), r = resolve(q);
+    if (r.none) { box.innerHTML = `<div class="section"><div class="empty">${esc(t('n.s.none', { q }))}</div></div>`; return; }
+    if (r.many) {
+      box.innerHTML = `<div class="section"><div class="body">${esc(t('n.s.many', { n: r.many.length, q }))}<div class="row" style="margin-top:8px">${r.many.slice(0, 60).map(x => `<button class="btn sm mono" data-pick="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div></div></div>`;
+      box.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => { S.netQuery = b.dataset.pick; vNetwork(); });
+      return;
+    }
+    if (r.commit) return commitFocus(r.commit);
+    return branchFocus(r.branch);
+  }
+
+  // first-parent line of main: commits that are "on master" itself
+  const mainTip = refHash(P.main), mainFP = new Set();
+  for (let x = mainTip; x && byHash.get(x); x = byHash.get(x).p[0]) mainFP.add(x);
+  const inMain = ancestors([mainTip], new Map());
+  // which branch received a merge: from the message ("… into staging"), or else the branch whose own
+  // (first-parent) line contains the merge commit (git omits "into …" for some branches)
+  let fpOwner = null;
+  const ownerOf = h => {
+    if (!fpOwner) {
+      fpOwner = new Map();
+      const rank = n => n === P.main ? 0 : P.envs.some(e => e.name === short(n)) ? 1 : /\/release\//.test(n) ? 2 : 3;
+      G.refs.slice().sort((a, b) => rank(a.name) - rank(b.name)).forEach(r => {
+        for (let x = r.h; x && byHash.get(x) && !fpOwner.has(x); x = byHash.get(x).p[0]) fpOwner.set(x, short(r.name));
+      });
+    }
+    return fpOwner.get(h);
+  };
+  const mergeTarget = (c, fallback) => { const m = c.s.match(/ into ([\w./-]+)/); return m ? m[1].replace(new RegExp('^' + P.remote + '/'), '') : (ownerOf(c.h) || fallback); };
+
+  function branchFocus(b) {
+    const B = b.h, fp = [];
+    let stop = null;
+    for (let x = B; x && byHash.get(x); x = byHash.get(x).p[0]) { if (x !== B && mainFP.has(x)) { stop = x; break; } fp.push(x); if (fp.length > 400) break; }
+    let own, line = fp, partOfMain = false;
+    if (mainFP.has(B)) {                       // part of main's own line (main itself, or fast-forwarded): show its recent history
+      partOfMain = true;
+      // stop at the previous release / tag on the line (so a release shows only its own work), at most 25 commits
+      const otherTips = new Set(G.refs.filter(r => r.h !== B && short(r.name) !== main).map(r => r.h).concat(G.tags.map(x => x.h)));
+      const chain = [];
+      for (let x = B; x && byHash.get(x) && chain.length < 26; x = byHash.get(x).p[0]) { if (x !== B && b.name !== main && otherTips.has(x)) { chain.push(x); break; } chain.push(x); }
+      stop = chain.length > 1 && (chain.length > 25 || otherTips.has(chain[chain.length - 1])) ? chain[chain.length - 1] : null;
+      line = stop ? chain.slice(0, -1) : chain;
+      const before = stop ? ancestors([stop], new Map()) : new Set();
+      own = new Set([...ancestors([B], new Map())].filter(h => !before.has(h)));
+    } else {
+      const base = stop ? ancestors([stop], new Map()) : new Set();
+      own = new Set([...ancestors([B], new Map())].filter(h => !base.has(h)));   // the branch incl. what was merged into it
+    }
+    // the branch's own line (first-parent chain): its own commits, without branches merged into it
+    const lineSet = new Set(line), lineList = line.map(h => byHash.get(h)).filter(Boolean);
+    // where was it merged: commits outside the branch with a parent on its own line
+    const events = [], offshoots = [];
+    for (const c of G.commits) {
+      if (own.has(c.h)) continue;
+      if (c.p.length === 1 && lineSet.has(c.p[0]) && !partOfMain) {      // a normal commit on top of this branch: other work started from it
+        const tk = (c.s.match(/[A-Z][A-Z0-9_]*-\d+/) || [])[0];
+        offshoots.push({ c, p: c.p[0], name: ownerOf(c.h) || tk || c.h.slice(0, 8) });
+        continue;
+      }
+      c.p.forEach((p, i) => { if (lineSet.has(p) && !(i === 0 && partOfMain)) events.push({ c, p, target: mergeTarget(c, '?'), latest: p === B }); });
+    }
+    const missingAfter = p => { const got = ancestors([p], new Map()); return lineList.filter(c => c.p.length < 2 && !got.has(c.h)).length; };
+    events.forEach(e => { e.missing = e.latest ? 0 : missingAfter(e.p); if (!e.missing) e.latest = true; });
+    // other branches merged into this one (second parents of merges on its own line)
+    const incoming = [];
+    lineList.forEach(c => c.p.slice(1).forEach(p => { if (!lineSet.has(p)) { const m = c.s.match(/Merge (?:remote-tracking )?branch '([^']+)'|#\d+ (\S+) into/); incoming.push({ c, p, from: m ? (m[1] || m[2]).replace(new RegExp('^' + P.remote + '/'), '') : '?' }); } }));
+    const ownList = lineList;
+
+    const nodes = new Set([...own, ...events.map(e => e.c.h), ...incoming.map(x => x.p), ...offshoots.map(x => x.c.h)]); if (stop) nodes.add(stop);
+    const labels = [{ name: b.name, h: B, type: 'sel' }];
+    if (stop) labels.push({ name: partOfMain ? (G.refs.concat(G.tags).filter(r => r.h === stop).map(r => short(r.name))[0] || t('n.f.baseLbl', { main })) : t('n.f.baseLbl', { main }), h: stop, type: 'base' });
+    const lastPer = {}; events.forEach(e => { if (!lastPer[e.target] || e.c.d >= lastPer[e.target].c.d) lastPer[e.target] = e; });   // label only the latest merge per target
+    Object.values(lastPer).forEach(e => labels.push({ name: '→ ' + e.target + (e.latest ? '' : ' ' + t('n.f.oldLbl')), h: e.c.h, type: e.latest ? 'into' : 'intoOld' }));
+    [...new Map(incoming.map(x => [x.from, x])).values()].forEach(x => labels.push({ name: '← ' + x.from, h: x.p, type: 'base' }));
+    offshoots.forEach(x => labels.push({ name: '↳ ' + x.name, h: x.c.h, type: 'base' }));
+    const view = { list: G.commits.filter(c => nodes.has(c.h)), labels, focus: true };
+    const L = layout(view, null);
+    const pnl = panel(t('n.f.graphT', { b: b.name }), partOfMain ? t('n.f.fp', { main }) : t('n.f.graphD', { main }), view, L, null);
+
+    // summary card
+    const f = (S.ov && S.ov.features || []).find(x => x.short === b.name);
+    const released = inMain.has(B);
+    const nonMerge = ownList.filter(c => c.p.length < 2), authors = [...new Set(nonMerge.map(c => c.a))];
+    const stopC = stop && byHash.get(stop);
+    const firstEvents = {};                     // earliest merge per target
+    events.slice().sort((a, b) => a.c.d.localeCompare(b.c.d)).forEach(e => { (firstEvents[e.target] = firstEvents[e.target] || []).push(e); });
+    const rows = Object.entries(firstEvents).map(([target, es]) => { const last = es[es.length - 1];
+      return `<tr><td class="mono">${esc(target)}</td><td class="nw">${esc(es[0].c.d)}${es.length > 1 ? ` <span class="muted small">(${esc(t('n.f.times', { n: es.length }))})</span>` : ''}</td><td class="mono"><a href="#" data-commit="${last.c.h}">${last.c.h.slice(0, 8)}</a></td><td>${last.latest ? badge('b-ok', t('n.f.latest')) : badge('b-warn', t('n.f.old', { n: last.missing }))}</td></tr>`; }).join('');
+    const status = [released ? badge('b-ok', t('n.f.released', { main })) : badge('b-info', t('n.f.notReleased', { main }))];
+    if (f) { if (f.behind) status.push(badge('b-warn', t('f.behind', { n: f.behind }))); if (f.conflicts && f.conflicts.length) status.push(badge('b-bad', t('n.f.conflicts', { main, n: f.conflicts.length }))); }
+    const card = document.createElement('div'); card.className = 'section';
+    card.innerHTML = `<header><h2 class="mono">${esc(b.name)}</h2>${status.join(' ')}</header><div class="body grid" style="gap:12px">
+      <div class="kv">
+        <div><span>${esc(t('n.f.base', { main }))}</span><b>${stopC ? `<a href="#" class="mono" data-commit="${stopC.h}">${stopC.h.slice(0, 8)}</a> · ${esc(stopC.d)} · ${esc(stopC.s.slice(0, 70))}` : '—'}</b></div>
+        <div><span>${esc(t('n.f.commits'))}</span><b>${esc(t('n.f.commitsV', { n: nonMerge.length, m: ownList.length - nonMerge.length }))}</b></div>
+        <div><span>${esc(t('n.f.authors'))}</span><b>${esc(authors.join(', ') || '—')}</b></div>
+        <div><span>${esc(t('n.f.last'))}</span><b>${byHash.get(B) ? `<a href="#" class="mono" data-commit="${B}">${B.slice(0, 8)}</a> · ${esc(byHash.get(B).d)} · ${esc(byHash.get(B).s.slice(0, 70))}` : '—'}</b></div>
+      </div>
+      <div><b>${esc(t('n.f.into'))}</b>${rows ? `<table style="margin-top:4px"><thead><tr><th>${esc(t('n.f.th.target'))}</th><th>${esc(t('n.f.th.when'))}</th><th>${esc(t('n.f.th.commit'))}</th><th>${esc(t('n.f.th.version'))}</th></tr></thead><tbody>${rows}</tbody></table>` : `<div class="small muted">${esc(t('n.f.intoNone'))}</div>`}</div>
+      ${offshoots.length ? `<div><b>${esc(t('n.f.offshoots'))}</b><div class="small muted">${esc(t('n.f.offshootsD'))}</div><table style="margin-top:4px"><tbody>${offshoots.map(x => `<tr><td class="mono">${esc(x.name)}</td><td class="nw">${esc(x.c.d)}</td><td class="mono"><a href="#" data-commit="${x.c.h}">${x.c.h.slice(0, 8)}</a></td><td>${esc(x.c.s.slice(0, 80))}</td></tr>`).join('')}</tbody></table></div>` : ''}
+      ${incoming.length ? `<div><b>${esc(t('n.f.incoming'))}</b><div class="small muted">${esc(t('n.f.incomingD'))}</div><div class="row" style="margin-top:4px">${[...new Set(incoming.map(x => x.from))].map(x => badge('b-warn', x)).join(' ')}</div></div>` : ''}
+      <div><b>${esc(t('n.f.checkout'))}</b>${copyBtn(`git fetch\ngit checkout ${b.name}`)}</div>
+    </div>`;
+    const box = $('#netPanels'); box.innerHTML = ''; box.append(card, pnl.el); pnl.sc.scrollLeft = pnl.sc.scrollWidth;
+    card.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit); });
+  }
+
+  function commitFocus(c) {
+    $('#netPanels').innerHTML = '';
+    showCommit(c.h, true);
+  }
+  focusView(query);
+}
+// the normal view: whole repository now, compared with after cleanup
+function drawCompare(G, since, buildView, layout, panel, main) {
   const now = buildView('now'), aft = buildView(NET.after);
   const Ln = layout(now, since), La = layout(aft, since);
   const a = panel(t('n.now'), t('n.nowD', { n: G.refs.length }), now, Ln, null);
@@ -1135,6 +1343,46 @@ function drawNetwork(G) {
   let lock = false;
   const sync = (s, d) => s.addEventListener('scroll', () => { if (lock) return; lock = true; d.scrollLeft = d.scrollWidth - d.clientWidth - (s.scrollWidth - s.clientWidth - s.scrollLeft); lock = false; });
   sync(a.sc, b.sc); sync(b.sc, a.sc);
+}
+
+// ---------- commit details (click a dot, or search a commit hash)
+function containingRefs(G, h) {
+  if (!G._children) { G._children = new Map(); G.commits.forEach(c => c.p.forEach(p => { (G._children.get(p) || G._children.set(p, []).get(p)).push(c.h); })); }
+  const desc = new Set([h]), st = [h];
+  while (st.length) { const x = st.pop(); (G._children.get(x) || []).forEach(k => { if (!desc.has(k)) { desc.add(k); st.push(k); } }); }
+  const P = G.plan, sh = n => n.replace(new RegExp('^' + P.remote + '/'), '');
+  const refs = G.refs.map(r => ({ name: sh(r.name), h: r.h })).concat(G.tags.map(x => ({ name: x.name, h: x.h, tag: true })));
+  return { in: refs.filter(r => desc.has(r.h)), out: refs.filter(r => !desc.has(r.h)) };
+}
+async function showCommit(h, scroll) {
+  const box = $('#netDetail'); if (!box) return;
+  box.innerHTML = `<div class="section"><div class="loading">${spin(t('loading'))}</div></div>`;
+  if (!scroll) box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  let c; try { c = await api('/api/commit?h=' + encodeURIComponent(h)); } catch (e) { box.innerHTML = `<div class="section"><pre class="log">${esc(e.message)}</pre></div>`; return; }
+  const G = S.graph, P = G.plan, sh = n => n.replace(new RegExp('^' + P.remote + '/'), '');
+  const where = containingRefs(G, c.hash);
+  const main = sh(P.main), keyNames = [main, ...P.envs.map(e => e.name), ...P.unmergedRelease.map(sh)];
+  const group = rs => {
+    const g = { key: rs.filter(r => keyNames.includes(r.name)), rel: rs.filter(r => !r.tag && /^release\//.test(r.name)), tag: rs.filter(r => r.tag), other: rs.filter(r => !r.tag && !keyNames.includes(r.name) && !/^release\//.test(r.name)) };
+    g.rel = g.rel.filter(r => !g.key.includes(r));
+    return g;
+  };
+  const gi = group(where.in), keyOut = where.out.filter(r => keyNames.includes(r.name));
+  const chips = (rs, cls) => rs.map(r => `<span class="badge ${cls} mono">${esc(r.name)}</span>`).join(' ');
+  box.innerHTML = `<div class="section"><header><h2>${esc(t('n.c.title'))} <span class="mono">${c.hash.slice(0, 10)}</span></h2><button class="btn sm" data-copy="${esc(c.hash)}">${esc(t('n.c.copy'))}</button><button class="btn sm" id="ncClose">✕</button>
+      <div class="hint">${esc(c.date)} · ${esc(c.author)}</div></header>
+    <div class="body grid" style="gap:12px">
+      <div><b>${esc(c.subject)}</b>${c.body ? `<pre class="log" style="margin-top:6px">${esc(c.body)}</pre>` : ''}</div>
+      <div class="kv">
+        <div><span>${esc(t('n.c.in'))}</span><b>${gi.key.length ? chips(gi.key, 'b-ok') : ''} ${chips(gi.rel, 'b-info')} ${chips(gi.tag, 'b-warn')} ${gi.other.length > 8 ? chips(gi.other.slice(0, 8), 'b-mute') + ` <span class="muted small">+${gi.other.length - 8}</span>` : chips(gi.other, 'b-mute')}${where.in.length ? '' : `<span class="muted">${esc(t('n.c.inNone'))}</span>`}</b></div>
+        ${keyOut.length ? `<div><span>${esc(t('n.c.notIn'))}</span><b>${chips(keyOut, 'b-bad')}</b></div>` : ''}
+        <div><span>${esc(t('n.c.parents'))}</span><b>${c.parents.map(p => `<a href="#" class="mono" data-commit="${p}">${p.slice(0, 8)}</a>`).join(' ') || '—'}</b></div>
+      </div>
+      <div><b>${esc(t('n.c.files', { n: c.fileCount }))}</b>${c.parents.length > 1 ? `<div class="small muted">${esc(t('n.c.mergeFiles'))}</div>` : ''}
+        ${c.files.length ? `<table style="margin-top:4px"><tbody>${c.files.map(f => `<tr><td class="mono">${esc(f.path)}</td><td class="nw" style="color:var(--ok)">+${esc(f.add)}</td><td class="nw" style="color:var(--bad)">−${esc(f.del)}</td></tr>`).join('')}</tbody></table>` : `<div class="small muted">—</div>`}</div>
+    </div></div>`;
+  $('#ncClose').onclick = () => { box.innerHTML = ''; };
+  box.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit); });
 }
 
 // ============================================================ guide
@@ -1161,7 +1409,7 @@ const GUIDE = {
         <tr><td><a href="#" data-go="releases">Releases</a></td><td>Each open <code>release/…</code> branch: which features it contains and whether each one is up to date, commits that came from no feature branch, merges from dev / staging, features that are tested but not included, and release notes to copy.</td></tr>
         <tr><td><a href="#" data-go="envs">Environments</a></td><td>dev and staging: which features they carry, the <b>Lost-code check</b>, and the <b>Rebuild preview</b> (a trial build of master + selected features in a temporary folder).</td></tr>
         <tr><td><a href="#" data-go="cleanup">Cleanup</a></td><td>Delete merged branches on Backlog, turn old release branches into tags, delete merged branches on your PC, and review your stashes.</td></tr>
-        <tr><td><a href="#" data-go="network">Network</a></td><td>The commit graph as Backlog draws it today, compared with how it will look after cleanup.</td></tr>
+        <tr><td><a href="#" data-go="network">Network</a></td><td>The commit graph as Backlog draws it today, compared with how it will look after cleanup. <b>Search</b> a branch or ticket number (e.g. <code>1131</code>) to see only that branch: where it started, its own commits, where it was merged (latest or old version) and what was merged into it. Search a commit hash to see which branches contain it ("is this fix on staging yet?"). Click any dot for the commit's details and changed files. Press <code>/</code> to search.</td></tr>
       </tbody></table>`],
     ['tasks', 'Everyday tasks', `
       <h3>Start a new ticket</h3>
@@ -1278,7 +1526,7 @@ git push</pre>
         <tr><td><a href="#" data-go="releases">リリース管理</a></td><td>作業中の <code>release/…</code> ブランチごとに、含まれる機能ブランチとそれぞれが最新か、機能ブランチ由来でないコミット、dev / staging からのマージ、テスト済みだが未反映の機能、コピーできるリリースノートを表示します。</td></tr>
         <tr><td><a href="#" data-go="envs">環境</a></td><td>dev と staging に含まれる機能ブランチ、<b>コード欠落チェック</b>、<b>再構築プレビュー</b>（一時フォルダで master + 選択した機能ブランチを試しに作成）です。</td></tr>
         <tr><td><a href="#" data-go="cleanup">クリーンアップ</a></td><td>Backlog上のマージ済みブランチの削除、古いリリースブランチのタグ化、PC上のマージ済みブランチの削除、スタッシュの確認ができます。</td></tr>
-        <tr><td><a href="#" data-go="network">ネットワーク</a></td><td>Backlogが表示する現在のコミットグラフと、クリーンアップ後の姿を比較します。</td></tr>
+        <tr><td><a href="#" data-go="network">ネットワーク</a></td><td>Backlogが表示する現在のコミットグラフと、クリーンアップ後の姿を比較します。ブランチ名やチケット番号（例: <code>1131</code>）で<b>検索</b>すると、そのブランチだけを表示します: どこから作成したか、自分のコミット、どこにマージされたか（最新か古い版か）、何がマージされているか。コミットハッシュで検索すると、そのコミットを含むブランチが分かります（「この修正はもう staging に入っている？」）。点をクリックすると、コミットの詳細と変更ファイルを表示します。<code>/</code> キーで検索できます。</td></tr>
       </tbody></table>`],
     ['tasks', 'よくある作業', `
       <h3>新しいチケットを始める</h3>
@@ -1389,7 +1637,7 @@ function vGuide() {
 }
 
 // ============================================================ repositories
-function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); S.lcOpen = {}; }
+function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); S.lcOpen = {}; S.netQuery = ''; }
 // Always start from the latest git data: fetch from the remote first, then read the repository.
 async function fetchAndLoad() {
   $('#main').innerHTML = `<div class="loading">${spin(t('loadingFetch'))}</div>`;

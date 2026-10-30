@@ -379,6 +379,20 @@ async function deleteLocal(branches) {
   cache = null; return { ok: true, log: log.join('\n') };
 }
 
+// ---------------------------------------------------------------- one commit (details panel in Network)
+async function commitInfo(h) {
+  if (!/^[0-9a-f]{4,40}$/i.test(h || '')) throw new Error('unknown commit ' + h);
+  const r = await git(['show', '-s', '--no-color', '--format=%H%x09%P%x09%an%x09%ci%x09%s%x00%b', h]);
+  if (r.code !== 0) throw new Error('unknown commit ' + h);
+  const [head, body] = r.stdout.split('\x00');
+  const [hash, parents, author, date, subject] = head.split('\t');
+  const ps = parents ? parents.trim().split(' ') : [];
+  // what the commit changed; for a merge: what it brought in compared with its first parent
+  const d = await git(ps.length ? ['diff-tree', '-r', '--numstat', '-M', ps[0], hash] : ['diff-tree', '-r', '--numstat', '--root', '-M', hash]);
+  const files = lines(d.stdout).filter(l => /^(\d+|-)\t/.test(l)).map(l => { const [a, del, ...p] = l.split('\t'); return { add: a, del, path: p.join(' → ') }; });
+  return { hash, parents: ps, author, date: date.slice(0, 16), subject, body: (body || '').trim(), files: files.slice(0, 200), fileCount: files.length };
+}
+
 // ---------------------------------------------------------------- repositories
 // Detect remote, main branch and environment branches of a repository folder.
 async function detect(dir) {
@@ -459,6 +473,7 @@ const ROUTES = {
   'GET /api/browse': q => browse(q.get('dir')),
   'GET /api/overview': q => overview(q.get('refresh') === '1'),
   'GET /api/graph': () => graph(),
+  'GET /api/commit': q => commitInfo(q.get('h')),
   'GET /api/env-check': q => envCheck(q.get('env')),
   'GET /api/feature-conflicts': () => featureConflicts(),
   'POST /api/rebuild-preview': (q, b) => rebuildPreview(b.env, b.branches || []),
