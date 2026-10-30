@@ -64,8 +64,8 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .lc-when{color:var(--muted);margin-top:4px}
 .lc-sum>.chev{align-self:flex-start;margin-top:3px}
 .net-search{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.net-search input{flex:1 1 320px;min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
-.net-search input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.net-search input[type=search]{flex:1 1 320px;min-width:200px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:inherit}
+.net-search input[type=search]:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .kv{display:grid;gap:6px}
 .kv>div{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:baseline}
 .kv>div>span{color:var(--muted);font-size:12.5px}.kv>div>b{font-weight:400;min-width:0;word-break:break-word}
@@ -74,6 +74,12 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .netsvg .intoold rect{fill:var(--warn-bg);stroke:var(--warn)}.netsvg .intoold text{fill:var(--warn)}
 .netsvg .basel rect{fill:var(--chip);stroke:var(--faint)}.netsvg .basel text{fill:var(--muted)}
 .netsvg .sell rect{fill:var(--accent);stroke:var(--accent)}.netsvg .sell text{fill:#fff;font-weight:700}
+.netsvg .ctxl{opacity:.55}.netsvg .ctxl rect{fill:var(--chip);stroke:var(--faint)}.netsvg .ctxl text{fill:var(--muted)}
+.netsvg .dimmed{opacity:.18;filter:blur(1.2px) grayscale(.6)}
+.zoom{display:inline-flex;gap:4px}.zoom .btn{min-width:34px;justify-content:center}
+.scroll.tall{max-height:72vh;overflow:auto}
+.net-search .chk{white-space:nowrap}
+.stats[hidden]{display:none}
 .lc-sum .lc-ic{font-size:20px;line-height:1.2}.lc-sum ul{margin:4px 0;padding-left:18px}
 .lc-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
 .lc-card p{margin:6px 0}
@@ -394,7 +400,7 @@ const I18N = {
     'n.simulated': 'simulated',
     'n.s.ph': 'Search a branch, ticket number or commit hash (e.g. 1131, release/20261030, e945084b)', 'n.s.btn': 'Show', 'n.s.clear': 'Show everything',
     'n.s.hint': 'Press / to search', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
-    'n.f.graphT': 'History of {b}', 'n.f.graphD': 'Only this branch: its own commits, where it started from {main} (base), and where it was merged (→). Click a dot for details.',
+    'n.f.graphT': 'History of {b}', 'n.f.graphD': 'The branch in bold: its own commits, where it started from {main} (base), and where it was merged (→). Click a dot for details.',
     'n.f.fp': 'This branch is part of {main}\'s own line (merged by fast-forward), so its commits since the previous release or tag are shown (at most 25). Click a dot for details.',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '(old)', 'n.f.times': p => `${p.n} times`,
     'n.f.released': 'released: in {main}', 'n.f.notReleased': 'not in {main} yet', 'n.f.conflicts': p => `conflicts with ${p.main}: ${pl(p.n, 'file', 'files')}`,
@@ -405,6 +411,8 @@ const I18N = {
     'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
+    'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: buttons, or Ctrl + mouse wheel over the graph',
+    'n.f.ctxD': 'Other branches are faded; drag the scroll bars or zoom to look around.',
     'n.f.offshoots': 'Work started on top of this branch', 'n.f.offshootsD': 'Commits made directly on top of this branch somewhere else. That work depends on this branch.',
     'n.c.title': 'Commit', 'n.c.copy': 'Copy hash', 'n.c.in': 'Contained in', 'n.c.inNone': 'No branch or tag contains this commit.',
     'n.c.notIn': 'Not in', 'n.c.parents': 'Parents', 'n.c.files': p => `Changed files (${p.n})`,
@@ -572,7 +580,7 @@ const I18N = {
     'n.simulated': 'シミュレーション',
     'n.s.ph': 'ブランチ名・チケット番号・コミットハッシュで検索（例: 1131、release/20261030、e945084b）', 'n.s.btn': '表示', 'n.s.clear': 'すべて表示',
     'n.s.hint': '/ キーで検索', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
-    'n.f.graphT': '{b} の履歴', 'n.f.graphD': 'このブランチだけを表示しています: 自分のコミット、{main} のどこから作成したか（base）、どこにマージされたか（→）。点をクリックすると詳細を表示します。',
+    'n.f.graphT': '{b} の履歴', 'n.f.graphD': '太線がこのブランチです: 自分のコミット、{main} のどこから作成したか（base）、どこにマージされたか（→）。点をクリックすると詳細を表示します。',
     'n.f.fp': 'このブランチは（fast-forward でマージされ）{main} 自体の履歴の一部なので、前回のリリースまたはタグ以降のコミットを表示しています（最大 25 件）。点をクリックすると詳細を表示します。',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '（古い版）', 'n.f.times': '{n} 回',
     'n.f.released': 'リリース済み（{main} に含まれる）', 'n.f.notReleased': '{main} に未反映', 'n.f.conflicts': '{main} とコンフリクト: {n} ファイル',
@@ -583,6 +591,8 @@ const I18N = {
     'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
+    'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: ボタン、またはグラフ上で Ctrl + マウスホイール',
+    'n.f.ctxD': '他のブランチは薄く表示しています。スクロールやズームで周りも確認できます。',
     'n.f.offshoots': 'このブランチの上で始まった作業', 'n.f.offshootsD': 'このブランチの上に直接作られた別のコミットです。その作業はこのブランチに依存しています。',
     'n.c.title': 'コミット', 'n.c.copy': 'ハッシュをコピー', 'n.c.in': '含まれている', 'n.c.inNone': 'このコミットを含むブランチ・タグはありません。',
     'n.c.notIn': '含まれていない', 'n.c.parents': '親コミット', 'n.c.files': '変更されたファイル（{n}）',
@@ -1071,6 +1081,7 @@ async function vNetwork() {
       <input type="search" id="nSearch" list="nSearchList" value="${esc(q)}" placeholder="${esc(t('n.s.ph'))}" autocomplete="off">
       <button class="btn primary" id="nGo">${esc(t('n.s.btn'))}</button>
       ${q ? `<button class="btn" id="nClear">${esc(t('n.s.clear'))}</button>` : ''}
+      ${q ? `<label class="chk small"><input type="checkbox" id="nCtx" ${NET.ctx !== false ? 'checked' : ''}> ${esc(t('n.s.ctx'))}</label>` : ''}
       <span class="small muted">${esc(t('n.s.hint'))}</span>
       <datalist id="nSearchList"></datalist>
     </div>
@@ -1086,6 +1097,7 @@ async function vNetwork() {
   $('#nSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value); if (e.key === 'Escape') search(''); };
   $('#nSearch').onchange = e => { if (S.graph && S.graph.refs.some(r => r.name.endsWith('/' + e.target.value))) search(e.target.value); };
   if ($('#nClear')) $('#nClear').onclick = () => search('');
+  if ($('#nCtx')) $('#nCtx').onchange = e => { NET.ctx = e.target.checked; save(); if (S.graph) drawNetwork(S.graph, S.netQuery); };
   if (!q) {
     $('#nRange').onclick = e => { const b = e.target.closest('button'); if (b) { NET.range = +b.dataset.v; save(); vNetwork(); } };
     $('#nAfter').onclick = e => { const b = e.target.closest('button'); if (b) { NET.after = b.dataset.v; save(); vNetwork(); } };
@@ -1152,41 +1164,54 @@ function drawNetwork(G, query) {
   const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ca8a04', '#0891b2', '#db2777', '#64748b', '#ea580c', '#059669', '#7c3aed', '#b45309'];
   const DX = 13, DY = 17, PADL = 30, PADT = 58, R = 3.6;
 
-  function panel(title, desc, view, L, base) {
+  // opt.hl: Set of commit hashes to highlight (everything else is faded and blurred)
+  // opt.zoom: scale factor; opt.zoomKey: which NET setting the +/- buttons change
+  function panel(title, desc, view, L, base, opt = {}) {
+    const hl = opt.hl || null, z = opt.zoom || 1;
     const n = L.list.length, X = h => PADL + (n - 1 - L.idx.get(h)) * DX, Y = k => PADT + k * DY, col = k => COLORS[k % COLORS.length];
     const byH = new Map(); view.labels.forEach(l => { if (L.idx.has(l.h)) (byH.get(l.h) || byH.set(l.h, []).get(l.h)).push(l); });
     const st = { branches: view.labels.filter(l => l.type === 'branch').length, tags: view.labels.filter(l => l.type === 'tag').length, commits: n, merges: L.list.filter(c => c.p.length > 1).length, lanes: L.nLanes };
     const dl = (k, lower = true) => { if (!base) return ''; const d = st[k] - base[k]; if (!d) return ''; return `<span class="d ${(lower ? d < 0 : d > 0) ? 'good' : 'bad'}">${d > 0 ? '+' : ''}${d}</span>`; };
     const W = PADL + n * DX + 220, H = PADT + L.nLanes * DY + 20;
-    let s = `<svg class="netsvg" width="${W}" height="${H}"><g class="axis">`;
+    let s = `<svg class="netsvg" width="${Math.round(W * z)}" height="${Math.round(H * z)}" viewBox="0 0 ${W} ${H}"><g class="axis">`;
     let maxM = '', lastX = -1e9;
     for (let i = n - 1; i >= 0; i--) { const m = L.list[i].d.slice(0, 7); if (m > maxM) { const x = PADL + (n - 1 - i) * DX; s += `<line x1="${x}" y1="14" x2="${x}" y2="${H - 6}" stroke-dasharray="2 4"/>`; if (x - lastX > 52) { s += `<text x="${x + 3}" y="12">${m}</text>`; lastX = x; } maxM = m; } }
-    s += '</g><g fill="none" stroke-width="1.6" stroke-linecap="round">';
+    s += '</g>';
+    const isHl = h => !hl || hl.has(h);
+    let dimEdges = '', hlEdges = '', dimDots = '', hlDots = '';
     for (const e of L.edges) {
       const c = L.list[L.idx.get(e.from)], xc = X(e.from), yc = Y(L.laneOf.get(e.from)), yk = Y(e.lane), cl = col(e.lane);
-      if (e.dangling) { s += `<path d="M${xc},${yc} L${xc - DX},${yk} L${PADL - 20},${yk}" stroke="${cl}" stroke-opacity=".35" stroke-dasharray="3 3"/>`; continue; }
+      const on = isHl(e.from) && (e.dangling || isHl(e.to));
+      if (e.dangling) { const p = `<path d="M${xc},${yc} L${xc - DX},${yk} L${PADL - 20},${yk}" stroke="${cl}" stroke-opacity=".35" stroke-dasharray="3 3"/>`; on ? hlEdges += p : dimEdges += p; continue; }
       const xp = X(e.to), yp = Y(L.laneOf.get(e.to)); let d;
       if (xc - xp <= DX) { const mx = (xc + xp) / 2; d = `M${xc},${yc} C${mx},${yc} ${mx},${yp} ${xp},${yp}`; }
       else { d = `M${xc},${yc}` + (yk !== yc ? ` C${xc - DX / 2},${yc} ${xc - DX / 2},${yk} ${xc - DX},${yk}` : ` L${xc - DX},${yk}`) + ` L${xp + DX},${yk}` + (yk !== yp ? ` C${xp + DX / 2},${yk} ${xp + DX / 2},${yp} ${xp},${yp}` : ` L${xp},${yp}`); }
-      s += `<path d="${d}" stroke="${cl}"${c.syn ? ' stroke-dasharray="4 3"' : ''}/>`;
+      const p = `<path d="${d}" stroke="${cl}"${c.syn ? ' stroke-dasharray="4 3"' : ''}/>`;
+      on ? hlEdges += p : dimEdges += p;
     }
-    s += '</g><g>';
-    for (const c of L.list) { const k = L.laneOf.get(c.h), m = c.p.length > 1; s += `<circle class="c" data-h="${c.h}" cx="${X(c.h)}" cy="${Y(k)}" r="${m ? R - .8 : R}" fill="${m ? 'var(--panel)' : col(k)}" stroke="${col(k)}" stroke-width="1.6"${c.syn ? ' stroke-dasharray="2 2"' : ''}/>`; }
-    s += '</g>';
-    if (NET.labels) {
+    for (const c of L.list) {
+      const k = L.laneOf.get(c.h), m = c.p.length > 1, on = isHl(c.h), r = (m ? R - .8 : R) * (hl && on ? 1.35 : 1);
+      const dot = `<circle class="c" data-h="${c.h}" cx="${X(c.h)}" cy="${Y(k)}" r="${r}" fill="${m ? 'var(--panel)' : col(k)}" stroke="${col(k)}" stroke-width="${hl && on ? 2.2 : 1.6}"${c.syn ? ' stroke-dasharray="2 2"' : ''}/>`;
+      on ? hlDots += dot : dimDots += dot;
+    }
+    // faded layer first, the highlighted branch on top
+    if (dimEdges || dimDots) s += `<g class="${hl ? 'dimmed' : ''}"><g fill="none" stroke-width="1.6" stroke-linecap="round">${dimEdges}</g><g>${dimDots}</g></g>`;
+    s += `<g fill="none" stroke-width="${hl ? 2.8 : 1.6}" stroke-linecap="round">${hlEdges}</g><g>${hlDots}</g>`;
+    if (NET.labels || hl) {
       s += '<g>'; const placed = [];
       const hit = (x, y, w) => placed.some(p => x < p.x + p.w && p.x < x + w && Math.abs(p.y - y) < 12);
       for (const [h, ls] of [...byH].sort((a, b) => X(a[0]) - X(b[0]))) {
         const x = X(h), cl = col(L.laneOf.get(h));
         ls.forEach(l => { const w = l.name.length * 6.2 + 8; let ly = Y(L.laneOf.get(h)) - 7; while (hit(x + 6, ly, w) && ly > 26) ly -= 13; placed.push({ x: x + 6, y: ly, w });
-          const plain = l.type === 'branch', cls = { tag: 'tagl', into: 'intol', intoOld: 'intoold', base: 'basel', sel: 'sell' }[l.type] || '';
+          const plain = l.type === 'branch', cls = { tag: 'tagl', into: 'intol', intoOld: 'intoold', base: 'basel', sel: 'sell', ctx: 'ctxl' }[l.type] || '';
           s += `<g class="lbl ${cls}"><rect x="${x + 6}" y="${ly - 9}" width="${w}" height="12" rx="3" ${plain ? `stroke="${cl}"` : ''}/><text x="${x + 10}" y="${ly}" ${plain ? `fill="${cl}"` : ''}>${esc(l.name)}</text></g>`; });
       }
       s += '</g>';
     }
     s += '</svg>';
     const el = document.createElement('div'); el.className = 'section';
-    el.innerHTML = `<header><h2>${esc(title)}</h2><div class="stats" ${view.focus ? 'hidden' : ''}><span class="stat">${esc(t('n.st.branches'))} <b>${st.branches}</b>${dl('branches')}</span><span class="stat">${esc(t('n.st.tags'))} <b>${st.tags}</b>${dl('tags', false)}</span><span class="stat">${esc(t('n.st.commits'))} <b>${st.commits}</b>${dl('commits')}</span><span class="stat">${esc(t('n.st.merges'))} <b>${st.merges}</b>${dl('merges')}</span><span class="stat">${esc(t('n.st.lanes'))} <b>${st.lanes}</b>${dl('lanes')}</span></div><div class="hint">${esc(desc)}</div></header><div class="scroll">${s}</div>`;
+    const zoomUi = `<div class="zoom" title="${esc(t('n.z.hint'))}"><button class="btn sm" data-zoom="-1">−</button><button class="btn sm" data-zoom="0">${Math.round(z * 100)}%</button><button class="btn sm" data-zoom="1">＋</button></div>`;
+    el.innerHTML = `<header><h2>${esc(title)}</h2>${zoomUi}<div class="stats" ${view.focus ? 'hidden' : ''}><span class="stat">${esc(t('n.st.branches'))} <b>${st.branches}</b>${dl('branches')}</span><span class="stat">${esc(t('n.st.tags'))} <b>${st.tags}</b>${dl('tags', false)}</span><span class="stat">${esc(t('n.st.commits'))} <b>${st.commits}</b>${dl('commits')}</span><span class="stat">${esc(t('n.st.merges'))} <b>${st.merges}</b>${dl('merges')}</span><span class="stat">${esc(t('n.st.lanes'))} <b>${st.lanes}</b>${dl('lanes')}</span></div><div class="hint">${esc(desc)}</div></header><div class="scroll">${s}</div>`;
     const sc = el.querySelector('.scroll'), tip = $('#tip');
     sc.addEventListener('mousemove', ev => {
       const tg = ev.target.closest('circle.c'); if (!tg) { tip.style.display = 'none'; return; }
@@ -1198,7 +1223,27 @@ function drawNetwork(G, query) {
     });
     sc.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
     sc.addEventListener('click', ev => { const tg = ev.target.closest('circle.c'); if (tg && !tg.dataset.h.startsWith('sim-')) showCommit(tg.dataset.h); });
-    return { el, st, sc };
+    // zoom: buttons, or Ctrl + mouse wheel over the graph; keeps the same spot in view
+    const setZoom = dir => {
+      const key = opt.zoomKey || 'zoom', cur = z;
+      const next = dir === 0 ? 1 : Math.min(4, Math.max(0.4, Math.round((cur + dir * (cur >= 1.5 ? 0.25 : 0.1)) * 100) / 100));
+      if (next === cur) return;
+      S.netKeep = { x: (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth, y: (sc.scrollTop + sc.clientHeight / 2) / Math.max(1, sc.scrollHeight) };
+      NET[key] = next; try { localStorage.setItem('gbt-net', JSON.stringify(NET)); } catch (e) {}
+      tip.style.display = 'none';
+      drawNetwork(S.graph, S.netQuery || '');
+    };
+    el.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => setZoom(+b.dataset.zoom));
+    sc.addEventListener('wheel', ev => { if (!ev.ctrlKey) return; ev.preventDefault(); setZoom(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
+    const keep = () => {                         // after a zoom: restore the spot that was in the middle
+      if (!S.netKeep) return false;
+      sc.scrollLeft = S.netKeep.x * sc.scrollWidth - sc.clientWidth / 2; sc.scrollTop = S.netKeep.y * sc.scrollHeight - sc.clientHeight / 2;
+      return true;
+    };
+    // where the highlighted commits are (for scrolling to them)
+    let hlBox = null;
+    if (hl) { const xs = [], ys = []; L.list.forEach(c => { if (hl.has(c.h)) { xs.push(X(c.h)); ys.push(Y(L.laneOf.get(c.h))); } }); if (xs.length) hlBox = { x1: Math.min(...xs) * z, x2: Math.max(...xs) * z, y1: Math.min(...ys) * z, y2: Math.max(...ys) * z }; }
+    return { el, st, sc, keep, hlBox };
   }
   if (!query) return drawCompare(G, since, buildView, layout, panel, main);
 
@@ -1294,9 +1339,23 @@ function drawNetwork(G, query) {
     Object.values(lastPer).forEach(e => labels.push({ name: '→ ' + e.target + (e.latest ? '' : ' ' + t('n.f.oldLbl')), h: e.c.h, type: e.latest ? 'into' : 'intoOld' }));
     [...new Map(incoming.map(x => [x.from, x])).values()].forEach(x => labels.push({ name: '← ' + x.from, h: x.p, type: 'base' }));
     offshoots.forEach(x => labels.push({ name: '↳ ' + x.name, h: x.c.h, type: 'base' }));
-    const view = { list: G.commits.filter(c => nodes.has(c.h)), labels, focus: true };
-    const L = layout(view, null);
-    const pnl = panel(t('n.f.graphT', { b: b.name }), partOfMain ? t('n.f.fp', { main }) : t('n.f.graphD', { main }), view, L, null);
+    const ctx = NET.ctx !== false, zoomOpt = { zoom: NET.zoomF || 1.6, zoomKey: 'zoomF' };
+    let view, L, pnlOpt;
+    if (ctx) {
+      // the whole network around this branch (from a week before it started), the branch highlighted
+      const dates = [...nodes].map(h => (byHash.get(h) || {}).d).filter(Boolean).sort();
+      const from = new Date(dates[0] || today); from.setDate(from.getDate() - 7);
+      const ctxLabels = [P.main, ...P.envs.map(e => P.remote + '/' + e.name)].filter(refHash).map(n => ({ name: short(n), h: refHash(n), type: 'ctx' }));
+      view = { list: buildView('now').list, labels: labels.concat(ctxLabels.filter(l => !labels.some(x => x.h === l.h))), focus: true };
+      L = layout(view, from.toISOString().slice(0, 10));
+      pnlOpt = { ...zoomOpt, hl: nodes };
+    } else {
+      view = { list: G.commits.filter(c => nodes.has(c.h)), labels, focus: true };
+      L = layout(view, null);
+      pnlOpt = zoomOpt;
+    }
+    const pnl = panel(t('n.f.graphT', { b: b.name }), (partOfMain ? t('n.f.fp', { main }) : t('n.f.graphD', { main })) + (ctx ? ' ' + t('n.f.ctxD') : ''), view, L, null, pnlOpt);
+    pnl.sc.classList.add('tall');
 
     // summary card
     const f = (S.ov && S.ov.features || []).find(x => x.short === b.name);
@@ -1322,7 +1381,15 @@ function drawNetwork(G, query) {
       ${incoming.length ? `<div><b>${esc(t('n.f.incoming'))}</b><div class="small muted">${esc(t('n.f.incomingD'))}</div><div class="row" style="margin-top:4px">${[...new Set(incoming.map(x => x.from))].map(x => badge('b-warn', x)).join(' ')}</div></div>` : ''}
       <div><b>${esc(t('n.f.checkout'))}</b>${copyBtn(`git fetch\ngit checkout ${b.name}`)}</div>
     </div>`;
-    const box = $('#netPanels'); box.innerHTML = ''; box.append(card, pnl.el); pnl.sc.scrollLeft = pnl.sc.scrollWidth;
+    const box = $('#netPanels'); box.innerHTML = ''; box.append(card, pnl.el);
+    const sc = pnl.sc, hb = pnl.hlBox;
+    if (!pnl.keep()) {
+      if (hb) {                                // bring the highlighted branch into view (its newest part if it is wide)
+        sc.scrollLeft = hb.x2 - hb.x1 < sc.clientWidth - 160 ? (hb.x1 + hb.x2) / 2 - sc.clientWidth / 2 : hb.x2 - sc.clientWidth + 160;
+        sc.scrollTop = (hb.y1 + hb.y2) / 2 - sc.clientHeight / 2;
+      } else sc.scrollLeft = sc.scrollWidth;
+    }
+    S.netKeep = null;
     card.querySelectorAll('[data-commit]').forEach(a => a.onclick = e => { e.preventDefault(); showCommit(a.dataset.commit); });
   }
 
@@ -1336,10 +1403,12 @@ function drawNetwork(G, query) {
 function drawCompare(G, since, buildView, layout, panel, main) {
   const now = buildView('now'), aft = buildView(NET.after);
   const Ln = layout(now, since), La = layout(aft, since);
-  const a = panel(t('n.now'), t('n.nowD', { n: G.refs.length }), now, Ln, null);
-  const b = panel(NET.after === 'full' ? t('n.fullT') : t('n.branchesT'), NET.after === 'full' ? t('n.fullD', { main }) : t('n.branchesD'), aft, La, a.st);
+  const zo = { zoom: NET.zoom || 1, zoomKey: 'zoom' };
+  const a = panel(t('n.now'), t('n.nowD', { n: G.refs.length }), now, Ln, null, zo);
+  const b = panel(NET.after === 'full' ? t('n.fullT') : t('n.branchesT'), NET.after === 'full' ? t('n.fullD', { main }) : t('n.branchesD'), aft, La, a.st, zo);
   const box = $('#netPanels'); box.innerHTML = ''; box.append(a.el, b.el);
-  [a.sc, b.sc].forEach(sc => { sc.scrollLeft = sc.scrollWidth; });
+  [a, b].forEach(p => { if (!p.keep()) p.sc.scrollLeft = p.sc.scrollWidth; });
+  S.netKeep = null;
   let lock = false;
   const sync = (s, d) => s.addEventListener('scroll', () => { if (lock) return; lock = true; d.scrollLeft = d.scrollWidth - d.clientWidth - (s.scrollWidth - s.clientWidth - s.scrollLeft); lock = false; });
   sync(a.sc, b.sc); sync(b.sc, a.sc);
