@@ -78,6 +78,17 @@ details[open]>summary .chev{transform:rotate(90deg)}
 .netsvg .dimmed{opacity:.18;filter:blur(1.2px) grayscale(.6)}
 .zoom{display:inline-flex;gap:4px}.zoom .btn{min-width:34px;justify-content:center}
 .scroll.tall{max-height:72vh;overflow:auto}
+#netPanels .scroll{overflow:auto;max-height:72vh;cursor:grab;touch-action:none;user-select:none}
+#netPanels .scroll.grabbing{cursor:grabbing}
+#netPanels .scroll circle.c{cursor:pointer}
+#netDetail:not(:empty){margin-top:16px}
+#netPanels{gap:16px}
+.ac{position:relative;flex:1 1 320px;min-width:200px;display:flex}
+.ac input{width:100%}
+.ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:15;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-height:340px;overflow:auto;padding:4px}
+.ac-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.ac-item:hover,.ac-item.on{background:var(--hover)}
+.ac-item mark{background:var(--warn-bg);color:inherit;border-radius:2px;padding:0 1px}
 .net-search .chk{white-space:nowrap}
 .stats[hidden]{display:none}
 .lc-sum .lc-ic{font-size:20px;line-height:1.2}.lc-sum ul{margin:4px 0;padding-left:18px}
@@ -399,7 +410,7 @@ const I18N = {
     'n.branchesT': 'After deleting branches', 'n.branchesD': 'Merged branches deleted and old releases kept as tags. History is unchanged.',
     'n.simulated': 'simulated',
     'n.s.ph': 'Search a branch, ticket number or commit hash (e.g. 1131, release/20261030, e945084b)', 'n.s.btn': 'Show', 'n.s.clear': 'Show everything',
-    'n.s.hint': 'Press / to search', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
+    'n.s.hint': '/ = search · graph: wheel = zoom, drag = move', 'n.s.none': 'Nothing found for "{q}".', 'n.s.many': '{n} branches match "{q}". Choose one:',
     'n.f.graphT': 'History of {b}', 'n.f.graphD': 'The branch in bold: its own commits, where it started from {main} (base), and where it was merged (→). Click a dot for details.',
     'n.f.fp': 'This branch is part of {main}\'s own line (merged by fast-forward), so its commits since the previous release or tag are shown (at most 25). Click a dot for details.',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '(old)', 'n.f.times': p => `${p.n} times`,
@@ -411,7 +422,7 @@ const I18N = {
     'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
-    'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: buttons, or Ctrl + mouse wheel over the graph',
+    'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: mouse wheel over the graph (or these buttons). Drag to move, Shift + wheel to scroll sideways.',
     'n.f.ctxD': 'Other branches are faded; drag the scroll bars or zoom to look around.',
     'n.f.offshoots': 'Work started on top of this branch', 'n.f.offshootsD': 'Commits made directly on top of this branch somewhere else. That work depends on this branch.',
     'n.c.title': 'Commit', 'n.c.copy': 'Copy hash', 'n.c.in': 'Contained in', 'n.c.inNone': 'No branch or tag contains this commit.',
@@ -579,7 +590,7 @@ const I18N = {
     'n.branchesT': 'ブランチ削除後', 'n.branchesD': 'マージ済みブランチを削除し、古いリリースをタグとして残した状態です。履歴自体は変わりません。',
     'n.simulated': 'シミュレーション',
     'n.s.ph': 'ブランチ名・チケット番号・コミットハッシュで検索（例: 1131、release/20261030、e945084b）', 'n.s.btn': '表示', 'n.s.clear': 'すべて表示',
-    'n.s.hint': '/ キーで検索', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
+    'n.s.hint': '/ で検索 · グラフ: ホイールでズーム、ドラッグで移動', 'n.s.none': '「{q}」は見つかりませんでした。', 'n.s.many': '「{q}」に一致するブランチが {n} 件あります。選んでください:',
     'n.f.graphT': '{b} の履歴', 'n.f.graphD': '太線がこのブランチです: 自分のコミット、{main} のどこから作成したか（base）、どこにマージされたか（→）。点をクリックすると詳細を表示します。',
     'n.f.fp': 'このブランチは（fast-forward でマージされ）{main} 自体の履歴の一部なので、前回のリリースまたはタグ以降のコミットを表示しています（最大 25 件）。点をクリックすると詳細を表示します。',
     'n.f.baseLbl': 'base: {main}', 'n.f.oldLbl': '（古い版）', 'n.f.times': '{n} 回',
@@ -591,7 +602,7 @@ const I18N = {
     'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
-    'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: ボタン、またはグラフ上で Ctrl + マウスホイール',
+    'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: グラフ上でマウスホイール（またはこのボタン）。ドラッグで移動、Shift + ホイールで横スクロール。',
     'n.f.ctxD': '他のブランチは薄く表示しています。スクロールやズームで周りも確認できます。',
     'n.f.offshoots': 'このブランチの上で始まった作業', 'n.f.offshootsD': 'このブランチの上に直接作られた別のコミットです。その作業はこのブランチに依存しています。',
     'n.c.title': 'コミット', 'n.c.copy': 'ハッシュをコピー', 'n.c.in': '含まれている', 'n.c.inNone': 'このコミットを含むブランチ・タグはありません。',
@@ -1078,12 +1089,11 @@ async function vNetwork() {
   const q = S.netQuery || '';
   $('#main').innerHTML = topbar(t('n.title')) + `
     <div class="net-search">
-      <input type="search" id="nSearch" list="nSearchList" value="${esc(q)}" placeholder="${esc(t('n.s.ph'))}" autocomplete="off">
+      <div class="ac"><input type="search" id="nSearch" value="${esc(q)}" placeholder="${esc(t('n.s.ph'))}" autocomplete="off" role="combobox" aria-expanded="false"><div class="ac-list" id="nAc" role="listbox" hidden></div></div>
       <button class="btn primary" id="nGo">${esc(t('n.s.btn'))}</button>
       ${q ? `<button class="btn" id="nClear">${esc(t('n.s.clear'))}</button>` : ''}
       ${q ? `<label class="chk small"><input type="checkbox" id="nCtx" ${NET.ctx !== false ? 'checked' : ''}> ${esc(t('n.s.ctx'))}</label>` : ''}
       <span class="small muted">${esc(t('n.s.hint'))}</span>
-      <datalist id="nSearchList"></datalist>
     </div>
     ${q ? '' : `<div class="net-controls">
       <div><span class="small muted">${esc(t('n.period'))} </span><div class="seg" id="nRange">${[[1, 'n.m1'], [3, 'n.m3'], [6, 'n.m6'], [0, 'n.all']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${NET.range === v}">${esc(t(k))}</button>`).join('')}</div></div>
@@ -1094,8 +1104,7 @@ async function vNetwork() {
   const save = () => { try { localStorage.setItem('gbt-net', JSON.stringify(NET)); } catch (e) {} };
   const search = v => { S.netQuery = (v || '').trim(); vNetwork(); };
   $('#nGo').onclick = () => search($('#nSearch').value);
-  $('#nSearch').onkeydown = e => { if (e.key === 'Enter') search(e.target.value); if (e.key === 'Escape') search(''); };
-  $('#nSearch').onchange = e => { if (S.graph && S.graph.refs.some(r => r.name.endsWith('/' + e.target.value))) search(e.target.value); };
+  setupAutocomplete($('#nSearch'), $('#nAc'), search);
   if ($('#nClear')) $('#nClear').onclick = () => search('');
   if ($('#nCtx')) $('#nCtx').onchange = e => { NET.ctx = e.target.checked; save(); if (S.graph) drawNetwork(S.graph, S.netQuery); };
   if (!q) {
@@ -1105,16 +1114,55 @@ async function vNetwork() {
   }
   if (!S.graph) { try { S.graph = await api('/api/graph'); } catch (e) { $('#netPanels').innerHTML = `<pre class="log">${esc(e.message)}</pre>`; return; } }
   if (S.tab !== 'network') return;
-  const P = S.graph.plan, sh = n => n.replace(new RegExp('^' + P.remote + '/'), '');
-  $('#nSearchList').innerHTML = S.graph.refs.map(r => `<option value="${esc(sh(r.name))}">`).join('') + S.graph.tags.map(x => `<option value="${esc(x.name)}">`).join('');
   drawNetwork(S.graph, q);
 }
 // "/" jumps to the search box on the Network screen
 document.addEventListener('keydown', e => {
   if (e.key === '/' && S.tab === 'network' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { e.preventDefault(); const i = $('#nSearch'); if (i) { i.focus(); i.select(); } }
 });
+// Search suggestions: same width as the search box; ↑/↓ to move, Enter to choose, Esc to close
+function setupAutocomplete(input, list, onPick) {
+  let items = [], active = -1;
+  const names = () => {
+    if (!S.graph) return [];
+    const P = S.graph.plan, sh = n => n.replace(new RegExp('^' + P.remote + '/'), '');
+    return S.graph.refs.map(r => ({ name: sh(r.name), kind: 'branch' })).concat(S.graph.tags.map(x => ({ name: x.name, kind: 'tag' })));
+  };
+  const close = () => { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; };
+  const render = () => {
+    list.innerHTML = items.map((x, i) => {
+      const k = x.name.toLowerCase().indexOf(input.value.trim().toLowerCase()), q = input.value.trim().length;
+      const label = k < 0 || !q ? esc(x.name) : esc(x.name.slice(0, k)) + '<mark>' + esc(x.name.slice(k, k + q)) + '</mark>' + esc(x.name.slice(k + q));
+      return `<div class="ac-item${i === active ? ' on' : ''}" role="option" data-i="${i}"><span class="mono">${label}</span>${x.kind === 'tag' ? '<span class="badge b-warn">tag</span>' : ''}</div>`;
+    }).join('');
+    list.hidden = !items.length; input.setAttribute('aria-expanded', String(!list.hidden));
+    const on = list.querySelector('.on'); if (on) on.scrollIntoView({ block: 'nearest' });
+  };
+  const update = () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { items = []; close(); return; }
+    const num = /^\d+$/.test(q) ? new RegExp('(^|[^0-9])' + q + '($|[^0-9])') : null;
+    const score = n => { const l = n.toLowerCase(); return (l === q ? 0 : num && num.test(l) ? 1 : l.startsWith(q) ? 2 : 3) * 1000 + l.length; };
+    items = names().filter(x => x.name.toLowerCase().includes(q)).sort((a, b) => score(a.name) - score(b.name)).slice(0, 12);
+    active = items.length ? 0 : -1; render();
+  };
+  input.addEventListener('input', update);
+  input.addEventListener('focus', () => { if (input.value.trim() && !S.netQuery) update(); });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown' && items.length) { e.preventDefault(); if (list.hidden) { update(); return; } active = (active + 1) % items.length; render(); }
+    else if (e.key === 'ArrowUp' && items.length) { e.preventDefault(); active = (active - 1 + items.length) % items.length; render(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const pick = !list.hidden && items[active] ? items[active].name : input.value; close(); onPick(pick); }
+    else if (e.key === 'Escape') { if (!list.hidden) { e.preventDefault(); close(); } else onPick(''); }
+  });
+  input.addEventListener('blur', () => setTimeout(close, 120));
+  list.addEventListener('mousedown', e => {
+    const it = e.target.closest('.ac-item'); if (!it) return;
+    e.preventDefault(); const x = items[+it.dataset.i]; close(); onPick(x.name);
+  });
+}
 
 function drawNetwork(G, query) {
+  const zoomGroup = [];                        // panels that zoom together (same zoom setting)
   const byHash = new Map(G.commits.map(c => [c.h, c]));
   const P = G.plan, short = n => n.replace(new RegExp('^' + P.remote + '/'), '');
   const main = short(P.main);
@@ -1222,19 +1270,50 @@ function drawNetwork(G, query) {
       tip.style.top = (ev.clientY + 16 + tip.offsetHeight > innerHeight ? ev.clientY - tip.offsetHeight - 10 : ev.clientY + 16) + 'px';
     });
     sc.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
-    sc.addEventListener('click', ev => { const tg = ev.target.closest('circle.c'); if (tg && !tg.dataset.h.startsWith('sim-')) showCommit(tg.dataset.h); });
-    // zoom: buttons, or Ctrl + mouse wheel over the graph; keeps the same spot in view
-    const setZoom = dir => {
-      const key = opt.zoomKey || 'zoom', cur = z;
-      const next = dir === 0 ? 1 : Math.min(4, Math.max(0.4, Math.round((cur + dir * (cur >= 1.5 ? 0.25 : 0.1)) * 100) / 100));
-      if (next === cur) return;
-      S.netKeep = { x: (sc.scrollLeft + sc.clientWidth / 2) / sc.scrollWidth, y: (sc.scrollTop + sc.clientHeight / 2) / Math.max(1, sc.scrollHeight) };
-      NET[key] = next; try { localStorage.setItem('gbt-net', JSON.stringify(NET)); } catch (e) {}
-      tip.style.display = 'none';
-      drawNetwork(S.graph, S.netQuery || '');
+    // ---- mouse control: drag to move, wheel to zoom (at the pointer), Shift + wheel to scroll sideways
+    let drag = null, dragged = false;
+    sc.addEventListener('click', ev => {
+      if (dragged) { dragged = false; return; }       // the end of a drag is not a click
+      const tg = ev.target.closest('circle.c'); if (tg && !tg.dataset.h.startsWith('sim-')) showCommit(tg.dataset.h);
+    });
+    sc.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0) return;
+      drag = { x: ev.clientX, y: ev.clientY, l: sc.scrollLeft, t: sc.scrollTop, id: ev.pointerId }; dragged = false;
+    });
+    sc.addEventListener('pointermove', ev => {
+      if (!drag) return;
+      const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+      if (!dragged && Math.abs(dx) + Math.abs(dy) > 4) { dragged = true; try { sc.setPointerCapture(drag.id); } catch (e) {} sc.classList.add('grabbing'); tip.style.display = 'none'; }
+      if (dragged) { sc.scrollLeft = drag.l - dx; sc.scrollTop = drag.t - dy; }
+    });
+    const endDrag = () => { drag = null; sc.classList.remove('grabbing'); };
+    sc.addEventListener('pointerup', endDrag); sc.addEventListener('pointercancel', endDrag);
+
+    // zoom without redrawing: only the SVG's size changes (its viewBox stays), the point under the pointer stays put
+    const svg = sc.querySelector('svg'), key = opt.zoomKey || 'zoom', zLabel = el.querySelector('[data-zoom="0"]');
+    let cur = z, saveTimer = null;
+    const apply = (next, ax, ay) => {
+      next = Math.min(5, Math.max(0.3, next));
+      if (Math.abs(next - cur) < 0.001) return;
+      const vx = (sc.scrollLeft + ax) / cur, vy = (sc.scrollTop + ay) / cur;
+      svg.setAttribute('width', Math.round(W * next)); svg.setAttribute('height', Math.round(H * next));
+      sc.scrollLeft = vx * next - ax; sc.scrollTop = vy * next - ay;
+      cur = next; zLabel.textContent = Math.round(next * 100) + '%';
+      NET[key] = Math.round(next * 100) / 100;
+      clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem('gbt-net', JSON.stringify(NET)); } catch (e) {} }, 300);
     };
-    el.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => setZoom(+b.dataset.zoom));
-    sc.addEventListener('wheel', ev => { if (!ev.ctrlKey) return; ev.preventDefault(); setZoom(ev.deltaY < 0 ? 1 : -1); }, { passive: false });
+    const zoomTo = (next, ax, ay, fromGroup) => {
+      apply(next, ax ?? sc.clientWidth / 2, ay ?? sc.clientHeight / 2);
+      if (!fromGroup) zoomGroup.filter(g => g.key === key && g.apply !== zoomTo).forEach(g => g.apply(next, undefined, undefined, true));
+    };
+    zoomGroup.push({ key, apply: zoomTo });
+    el.querySelectorAll('[data-zoom]').forEach(b => b.onclick = () => { const d = +b.dataset.zoom; zoomTo(d === 0 ? 1 : cur * (d > 0 ? 1.25 : 0.8)); });
+    sc.addEventListener('wheel', ev => {
+      ev.preventDefault(); tip.style.display = 'none';
+      if (ev.shiftKey) { sc.scrollLeft += ev.deltaY || ev.deltaX; return; }
+      const r = sc.getBoundingClientRect();
+      zoomTo(cur * Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top);
+    }, { passive: false });
     const keep = () => {                         // after a zoom: restore the spot that was in the middle
       if (!S.netKeep) return false;
       sc.scrollLeft = S.netKeep.x * sc.scrollWidth - sc.clientWidth / 2; sc.scrollTop = S.netKeep.y * sc.scrollHeight - sc.clientHeight / 2;
