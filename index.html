@@ -54,6 +54,15 @@ aside{border-right:1px solid var(--line);background:var(--panel);padding:16px 10
 .lc-sum{display:flex;gap:12px;border-radius:10px;padding:12px 14px;margin:6px 0 10px}
 .lc-sum.ok{background:var(--ok-bg)}.lc-sum.warn{background:var(--warn-bg)}.lc-sum.info{background:var(--info-bg)}
 .grid>*,.lc-card,.lc-sum>div{min-width:0}
+.lc-res>summary,.lc-card>summary{list-style:none;cursor:pointer}
+.lc-res>summary::-webkit-details-marker,.lc-card>summary::-webkit-details-marker{display:none}
+.lc-res>summary .lc-sum{margin-bottom:0}.lc-res[open]>summary .lc-sum{margin-bottom:10px}
+.lc-res>summary:hover .lc-sum{filter:brightness(.98)}
+.chev{display:inline-block;transition:transform .15s;color:var(--muted);font-size:12px;line-height:1.6}
+details[open]>summary .chev{transform:rotate(90deg)}
+.lc-card>summary{gap:8px}.lc-card[open]>summary{margin-bottom:6px}
+.lc-when{color:var(--muted);margin-top:4px}
+.lc-sum>.chev{align-self:flex-start;margin-top:3px}
 .lc-sum .lc-ic{font-size:20px;line-height:1.2}.lc-sum ul{margin:4px 0;padding-left:18px}
 .lc-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
 .lc-card p{margin:6px 0}
@@ -303,6 +312,10 @@ const I18N = {
     'e.features': 'Features on {e}', 'e.oldMark': ' (old)',
     'e.check': 'Lost-code check', 'e.checkBtn': 'Run check', 'e.checking': 'Checking…',
     'e.checkD': 'Checks that {e} contains only {main} + the unreleased features, and that no released code has gone missing on it.',
+    'e.fetchingFirst': 'Fetching latest data…', 'lc.checkedAt': 'Checked at {time} with the latest data from the remote.',
+    'lc.checkedOld': 'Checked at {time}. Fetching failed, so the data from the last fetch was used.',
+    'lc.toggle': 'Click to show or hide the details', 'lc.expandAll': 'Expand all', 'lc.collapseAll': 'Collapse all',
+    'lc.notMergedYet': 'from {main}, not merged into {e} yet',
     'lc.behindT': p => `Most likely cause: ${p.e} is ${pl(p.n, 'commit', 'commits')} behind ${p.main}`,
     'lc.behindD': 'Code released after the last update of {e} is not on it yet, so it shows up below as missing. Merge {main} into {e} first, then run the check again:',
     'lc.sinceT': 'Changed in {main} after {e} was last updated:',
@@ -457,6 +470,10 @@ const I18N = {
     'e.features': '{e} の機能ブランチ', 'e.oldMark': '（古い版）',
     'e.check': 'コード欠落チェック', 'e.checkBtn': 'チェック実行', 'e.checking': '確認中…',
     'e.checkD': '{e} が {main} + 未リリースの機能ブランチだけでできているか、リリース済みのコードが欠落していないかを確認します。',
+    'e.fetchingFirst': '最新データを取得中…', 'lc.checkedAt': '{time} にリモートの最新データでチェックしました。',
+    'lc.checkedOld': '{time} にチェックしました。取得に失敗したため、前回取得したデータを使用しています。',
+    'lc.toggle': 'クリックで詳細を表示／非表示', 'lc.expandAll': 'すべて開く', 'lc.collapseAll': 'すべて閉じる',
+    'lc.notMergedYet': '{main} の変更が {e} に未マージ',
     'lc.behindT': '主な原因: {e} は {main} より {n} 件遅れています',
     'lc.behindD': '{e} の最終更新後にリリースされたコードがまだ入っていないため、下で欠落として表示されています。まず {main} を {e} にマージしてから、もう一度チェックしてください:',
     'lc.sinceT': '{e} の最終更新後に {main} で変更されています:',
@@ -553,7 +570,7 @@ function applyStatic() {
 // ============================================================ basics
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const S = { ov: null, tab: 'overview', graph: null, results: {}, openRows: new Set() };
+const S = { ov: null, tab: 'overview', graph: null, results: {}, openRows: new Set(), lcOpen: {} };
 try { S.tab = localStorage.getItem('gbt-tab') || 'overview'; } catch (e) {}
 if (['overview', 'features', 'releases', 'envs', 'cleanup', 'network', 'guide'].includes(location.hash.slice(1))) S.tab = location.hash.slice(1);
 try { const th = localStorage.getItem('gbt-theme'); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
@@ -578,18 +595,21 @@ async function load(refresh) {
   try {
     S.ov = await api('/api/overview' + (refresh ? '?refresh=1' : ''));
     S.graph = null;
-    $('#repoName').textContent = S.ov.repo;
-    $('#repoPath').textContent = S.ov.repoPath;
-    $('#btnRepo').title = S.ov.remoteUrl || '';
-    $('#c-features').textContent = S.ov.features.length;
-    $('#c-cleanup').textContent = derive().cleanupCount || '';
-    $('#c-releases').textContent = (S.ov.releases || []).length || '';
-    applyStatic();
+    updateSidebar();
     show(S.tab);
   } catch (e) {
     if (e.noRepo) return noRepoScreen();
     $('#main').innerHTML = `<div class="section"><div class="empty">${esc(t('readFail'))}<pre class="log">${esc(e.message)}</pre></div></div>`;
   }
+}
+function updateSidebar() {
+  $('#repoName').textContent = S.ov.repo;
+  $('#repoPath').textContent = S.ov.repoPath;
+  $('#btnRepo').title = S.ov.remoteUrl || '';
+  $('#c-features').textContent = S.ov.features.length;
+  $('#c-cleanup').textContent = derive().cleanupCount || '';
+  $('#c-releases').textContent = (S.ov.releases || []).length || '';
+  applyStatic();
 }
 function derive() {
   const ov = S.ov;
@@ -801,11 +821,26 @@ function vEnvs() {
   const ov = S.ov;
   $('#main').innerHTML = topbar(t('e.title')) + `<div class="grid">${ov.envs.map(envSection).join('')}</div>`;
   ov.envs.forEach(e => {
+    // Run check: fetch the latest data from the remote first, refresh everything, then check
     $(`#chk-${e.name}`).addEventListener('click', async ev => {
-      ev.currentTarget.disabled = true; ev.currentTarget.innerHTML = spin(t('e.checking'));
-      try { S.results['check-' + e.name] = await api('/api/env-check?env=' + encodeURIComponent(e.name)); } catch (err) { toast(err.message); }
+      const b = ev.currentTarget; b.disabled = true; b.innerHTML = spin(t('e.fetchingFirst'));
+      let fetched = false;
+      try { fetched = (await api('/api/fetch', {})).ok; } catch (err) {}
+      try { S.ov = await api('/api/overview?refresh=1'); S.graph = null; updateSidebar(); } catch (err) {}
+      b.innerHTML = spin(t('e.checking'));
+      try {
+        const r = await api('/api/env-check?env=' + encodeURIComponent(e.name));
+        S.results['check-' + e.name] = { ...r, fetched, checkedAt: new Date().toTimeString().slice(0, 5) };
+        S.lcOpen['res|' + e.name] = true;
+      } catch (err) { toast(err.message); }
       if (S.tab === 'envs') vEnvs();
     });
+    // remember which parts of the result are open
+    document.querySelectorAll(`details[data-key^="res|${e.name}"], details[data-key^="file|${e.name}|"]`).forEach(d => d.addEventListener('toggle', () => { S.lcOpen[d.dataset.key] = d.open; }));
+    document.querySelectorAll(`[data-lcall="${e.name}"]`).forEach(btn => btn.addEventListener('click', () => {
+      const open = btn.dataset.v === '1';
+      document.querySelectorAll(`details[data-key^="file|${e.name}|"]`).forEach(d => { d.open = open; S.lcOpen[d.dataset.key] = open; });
+    }));
     $(`#rb-${e.name}`).addEventListener('click', async ev => {
       const picked = [...document.querySelectorAll(`input[data-rb="${e.name}"]:checked`)].map(i => i.value);
       S.results['pick-' + e.name] = picked;
@@ -841,16 +876,20 @@ function envSection(e) {
 function checkResult(c) {
   const env = c.env, main = c.main, P = { e: env, main };
   const miss = c.problems.filter(p => p.missingCount), unk = c.problems.filter(p => !p.missingCount);
-  let h = !c.problems.length
-    ? `<div class="lc-sum ok"><div class="lc-ic">✅</div><div><b>${esc(t('lc.okT', P))}</b><div>${esc(t('lc.okD', { ...P, n: c.filesDiffering, f: c.features.length }))}</div></div></div>`
-    : `<div class="lc-sum warn"><div class="lc-ic">⚠️</div><div><b>${esc(t('lc.badT', { ...P, n: c.problems.length }))}</b>
+  const when = `<div class="small lc-when">${esc(c.fetched ? t('lc.checkedAt', { time: c.checkedAt }) : t('lc.checkedOld', { time: c.checkedAt }))}</div>`;
+  // the verdict is the clickable summary line of the whole result
+  const verdict = !c.problems.length
+    ? `<div class="lc-sum ok"><span class="chev">▸</span><div class="lc-ic">✅</div><div style="flex:1"><b>${esc(t('lc.okT', P))}</b><div>${esc(t('lc.okD', { ...P, n: c.filesDiffering, f: c.features.length }))}</div>${when}</div></div>`
+    : `<div class="lc-sum warn"><span class="chev">▸</span><div class="lc-ic">⚠️</div><div style="flex:1"><b>${esc(t('lc.badT', { ...P, n: c.problems.length }))}</b>
         <ul>${miss.length ? `<li>🔴 ${esc(t('lc.badMissing', { ...P, n: miss.length }))}</li>` : ''}${unk.length ? `<li>🟡 ${esc(t('lc.badUnknown', { ...P, n: unk.length }))}</li>` : ''}</ul>
-        <div class="small">${esc(t('lc.badRest', { ...P, n: c.explainedFiles }))}</div></div></div>`;
+        <div class="small">${esc(t('lc.badRest', { ...P, n: c.explainedFiles }))}</div>${when}</div></div>`;
+  let h = '';
   if (c.behind && c.problems.some(p => p.releasedSince.length)) {
     const cmd = `git checkout ${env}\ngit pull\ngit merge --no-ff ${c.remote}/${main}\ngit push`;
     h += `<div class="lc-sum info"><div class="lc-ic">💡</div><div style="flex:1;min-width:0"><b>${esc(t('lc.behindT', { ...P, n: c.behind }))}</b>
       <div>${esc(t('lc.behindD', P))}</div>${copyBtn(cmd)}</div></div>`;
   }
+  if (c.problems.length > 1) h += `<div class="row" style="justify-content:flex-end;margin:6px 0"><button class="btn sm" data-lcall="${esc(env)}" data-v="1">${esc(t('lc.expandAll'))}</button><button class="btn sm" data-lcall="${esc(env)}" data-v="0">${esc(t('lc.collapseAll'))}</button></div>`;
   h += c.problems.map(p => problemCard(p, c)).join('');
   h += `<details class="lc-det"><summary>${esc(t('lc.breakdownT', { n: c.explainedFiles }))}</summary>
     <table><thead><tr><th>${esc(t('lc.th.feature'))}</th><th>${esc(t('lc.th.files'))}</th></tr></thead><tbody>
@@ -858,7 +897,8 @@ function checkResult(c) {
     ${c.trivialFiles ? `<tr><td class="muted">${esc(t('lc.trivial'))}</td><td>${c.trivialFiles}</td></tr>` : ''}</tbody></table>
     <div class="small muted">${esc(t('lc.breakdownD'))}</div></details>`;
   h += `<details class="lc-det"><summary>${esc(t('lc.howT'))}</summary>${t('lc.howBody', { e: esc(env), main: esc(main), paths: esc(c.paths.join(', ')) })}</details>`;
-  return `<div style="margin-top:10px">${h}</div>`;
+  const key = 'res|' + env, open = S.lcOpen[key] ?? true;
+  return `<details class="lc-res" data-key="${esc(key)}" ${open ? 'open' : ''}><summary title="${esc(t('lc.toggle'))}">${verdict}</summary><div class="lc-body">${h}</div></details>`;
 }
 function problemCard(p, c) {
   const env = c.env, main = c.main, ov = S.ov, P = { e: env, main };
@@ -869,8 +909,10 @@ function problemCard(p, c) {
     return `<div class="lc-l ${cls}${l.bad ? ' bad' : ''}"><span class="lc-s">${l.t === ' ' ? '&nbsp;' : l.t === '-' ? '−' : '+'}</span><span class="lc-c">${esc(l.s) || '&nbsp;'}</span>${l.bad ? '<span class="lc-m">◀</span>' : ''}</div>`;
   }).join('')).join('');
   const restore = `git checkout ${env}\ngit pull\ngit checkout ${ov.remote}/${main} -- ${p.file}\ngit commit -m "Restore ${p.file} from ${main}"\ngit push`;
-  return `<div class="lc-card">
-    <div class="row"><b class="mono" style="flex:1;word-break:break-all">${esc(p.file)}</b>${badges}</div>
+  const key = `file|${env}|${p.file}`, open = S.lcOpen[key] ?? false;
+  const notMerged = p.releasedSince.length ? ' ' + badge('b-info', t('lc.notMergedYet', P)) : '';
+  return `<details class="lc-card" data-key="${esc(key)}" ${open ? 'open' : ''}>
+    <summary class="row"><span class="chev">▸</span><b class="mono" style="flex:1;word-break:break-all">${esc(p.file)}</b>${badges}${notMerged}</summary>
     ${expl.map(x => `<p>${esc(x)}</p>`).join('')}
     <p class="small muted">${esc(p.touching.length ? t('lc.touching', { list: p.touching.join(', ') }) : t('lc.touchingNone', P))}</p>
     <div class="small"><b>${esc(t('lc.diffT', P))}</b> <span class="lc-leg del">${esc(t('lc.legendDel', P))}</span> <span class="lc-leg add">${esc(t('lc.legendAdd', P))}</span> <span class="lc-leg bad">◀ ${esc(t('lc.legendBad'))}</span></div>
@@ -882,7 +924,7 @@ function problemCard(p, c) {
       ${p.releasedSince.length ? `<p class="small" style="margin:4px 0">${esc(t('lc.fixMerge', P))}</p>`
         : p.touching.length ? `<p class="small" style="margin:4px 0">${esc(t('lc.fixManual', { ...P, list: p.touching.join(', ') }))}</p>`
         : `<p class="small" style="margin:4px 0">${esc(t('lc.fixRestore', P))}</p>${copyBtn(restore)}`}</div>
-  </div>`;
+  </details>`;
 }
 function rebuildResult(rb, cmds) {
   const ov = S.ov, bad = rb.steps.filter(s => !s.ok);
@@ -1312,7 +1354,7 @@ function vGuide() {
 }
 
 // ============================================================ repositories
-function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); }
+function resetRepoState() { S.ov = null; S.graph = null; S.results = {}; S.openRows = new Set(); S.lcOpen = {}; }
 // Always start from the latest git data: fetch from the remote first, then read the repository.
 async function fetchAndLoad() {
   $('#main').innerHTML = `<div class="loading">${spin(t('loadingFetch'))}</div>`;
