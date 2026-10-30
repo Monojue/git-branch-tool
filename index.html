@@ -51,6 +51,24 @@ aside{border-right:1px solid var(--line);background:var(--panel);padding:16px 10
 .field small{color:var(--muted)}
 .field select,.field input[type=text]{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
 .dsec{margin:14px 0 4px;font-size:13px;font-weight:650}
+.lc-sum{display:flex;gap:12px;border-radius:10px;padding:12px 14px;margin:6px 0 10px}
+.lc-sum.ok{background:var(--ok-bg)}.lc-sum.warn{background:var(--warn-bg)}.lc-sum.info{background:var(--info-bg)}
+.grid>*,.lc-card,.lc-sum>div{min-width:0}
+.lc-sum .lc-ic{font-size:20px;line-height:1.2}.lc-sum ul{margin:4px 0;padding-left:18px}
+.lc-card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.lc-card p{margin:6px 0}
+.lc-diff{border:1px solid var(--line);border-radius:8px;overflow:auto;max-height:420px;margin-top:6px;font-family:var(--mono);font-size:12px;background:var(--bg)}
+.lc-hunk{color:var(--faint);padding:4px 8px;border-top:1px solid var(--line);background:var(--panel)}
+.lc-hunk:first-child{border-top:0}
+.lc-l{display:flex;white-space:pre;padding:0 8px;line-height:1.55}
+.lc-l .lc-s{flex:0 0 16px;color:var(--muted)}.lc-l .lc-c{flex:1}.lc-l .lc-m{color:var(--bad);padding-left:8px;font-weight:700}
+.lc-l.ctx{color:var(--muted)}
+.lc-l.del{background:var(--bad-bg);opacity:.55}.lc-l.add{background:var(--ok-bg);opacity:.55}
+.lc-l.bad{opacity:1;font-weight:600}.lc-l.del.bad{box-shadow:inset 3px 0 var(--bad)}.lc-l.add.bad{background:var(--warn-bg);box-shadow:inset 3px 0 var(--warn)}
+.lc-leg{border-radius:4px;padding:0 6px;margin-left:6px;font-family:var(--mono);font-size:11.5px}
+.lc-leg.del{background:var(--bad-bg)}.lc-leg.add{background:var(--ok-bg)}.lc-leg.bad{color:var(--bad);font-weight:700}
+.lc-det{margin-top:8px}.lc-det summary{cursor:pointer;color:var(--accent);font-size:13px}
+.lc-det table{margin-top:6px;max-width:520px}.lc-det p,.lc-det ul{font-size:13px}
 .guide{max-width:920px}
 .guide .toc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .guide .toc a{font-size:12.5px;text-decoration:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:3px 10px;color:var(--ink)}
@@ -165,7 +183,7 @@ pre.log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padd
 <body>
 <div class="app">
   <aside>
-    <div class="brand">Git Branch Tool <span class="small muted" style="font-weight:400">v1</span></div>
+    <div class="brand">Git Branch Tool <span class="small muted" style="font-weight:400">v2</span></div>
     <button class="repo" id="btnRepo"><div class="rn"><b id="repoName">…</b><span data-i18n="repo.change"></span></div><div class="rp" id="repoPath"></div></button>
     <nav class="nav" id="nav">
       <button data-tab="overview" aria-current="page"><span data-i18n="nav.overview"></span></button>
@@ -284,7 +302,33 @@ const I18N = {
     'e.aheadBehind': '{a} ahead · {b} behind {main}', 'e.merges': '{n} merge commits', 'e.last': 'Last:',
     'e.features': 'Features on {e}', 'e.oldMark': ' (old)',
     'e.check': 'Lost-code check', 'e.checkBtn': 'Run check', 'e.checking': 'Checking…',
-    'e.checkD': 'Every difference between {e} and {main} should come from an unreleased feature. Anything else is released code that went missing, or leftovers from old conflict fixes.',
+    'e.checkD': 'Checks that {e} contains only {main} + the unreleased features, and that no released code has gone missing on it.',
+    'lc.behindT': p => `Most likely cause: ${p.e} is ${pl(p.n, 'commit', 'commits')} behind ${p.main}`,
+    'lc.behindD': 'Code released after the last update of {e} is not on it yet, so it shows up below as missing. Merge {main} into {e} first, then run the check again:',
+    'lc.sinceT': 'Changed in {main} after {e} was last updated:',
+    'lc.fixMerge': 'This file changed in {main} after {e} was last updated. Merge {main} into {e} (command above), then run the check again.',
+    'lc.okT': '{e} is OK', 'lc.okD': p => `${p.e} = ${p.main} + unreleased features. ${pl(p.n, 'file differs', 'files differ')} from ${p.main}, and every difference comes from one of ${pl(p.f, 'feature branch', 'feature branches')}.`,
+    'lc.badT': p => `${pl(p.n, 'file', 'files')} on ${p.e} need${p.n === 1 ? 's' : ''} attention`,
+    'lc.badMissing': p => `${pl(p.n, 'file', 'files')}: released code is missing on ${p.e}`,
+    'lc.badUnknown': p => `${pl(p.n, 'file', 'files')}: unknown changes on ${p.e} (from no feature branch)`,
+    'lc.badRest': p => `The other ${pl(p.n, 'differing file is', 'differing files are')} fine: they come from unreleased features.`,
+    'lc.breakdownT': 'Which features explain the differences ({n} files)', 'lc.th.feature': 'Feature branch', 'lc.th.files': 'Files',
+    'lc.trivial': 'Only blank lines / braces', 'lc.breakdownD': 'A file changed by several features is counted for each of them.',
+    'lc.missingBadge': p => `🔴 released code missing: ${pl(p.n, 'line', 'lines')}`, 'lc.extraBadge': p => `🟡 unknown change: ${pl(p.n, 'line', 'lines')}`,
+    'lc.missingExpl': '{main} (released code) has lines here that {e} does not have, and no unreleased feature removes them. For this file, the {e} server runs older code than production.',
+    'lc.extraExpl': '{e} has lines here that are not in {main} and that come from no unreleased feature. Usually a leftover from an old conflict fix, or a commit made directly on {e}.',
+    'lc.touching': 'Unreleased features that change this file: {list}', 'lc.touchingNone': 'No unreleased feature changes this file, so on {e} it should be identical to {main}.',
+    'lc.diffT': 'Difference ({main} → {e}):', 'lc.legendDel': '− only in {main}', 'lc.legendAdd': '+ only on {e}', 'lc.legendBad': 'problem line',
+    'lc.more': 'Only the parts with problems are shown. Faded lines are explained by features.', 'lc.commitsT': 'Last changes to this file on {e}:',
+    'lc.fixT': 'How to fix', 'lc.fixRestore': "Restore {main}'s version of this file on {e}:",
+    'lc.fixManual': "Open this file on {e} and compare it with {main} and with {list}. Keep the features' changes and fix the problem lines by hand, or rebuild {e} from {main} + features (Rebuild preview below).",
+    'lc.howT': 'How does this check work?',
+    'lc.howBody': `<p>{e} should contain exactly <b>{main}</b> + the unreleased feature branches. So every line where {e} differs from {main} should be a line that one of those feature branches changes.</p>
+      <p>The check compares {e} with {main} file by file and matches every difference against the changes of all unreleased feature branches:</p>
+      <ul><li>✅ The difference is a change of some feature → explained, OK.</li>
+        <li>🔴 A line is in {main} but not on {e}, and no feature removes it → <b>released code is missing on {e}</b>.</li>
+        <li>🟡 A line is on {e} but not in {main}, and no feature adds it → <b>unknown change</b>: usually an old conflict fix, or a commit made directly on {e}.</li></ul>
+      <p>Spaces, blank lines and lines with only a brace are ignored. Checked folders: <code>{paths}</code> (change them in the repository settings).</p>`,
     'e.rb': 'Rebuild preview', 'e.rbBtn': 'Preview rebuild', 'e.rbRunning': 'Trial merge in a temporary folder…',
     'e.rbD': 'Builds {main} + the selected features in a temporary folder to see which ones conflict. Nothing is pushed and your working copy is not touched.',
     'e.conflictsMain': 'conflicts with {main}',
@@ -412,7 +456,33 @@ const I18N = {
     'e.aheadBehind': '{main} より {a} 件先行 · {b} 件遅れ', 'e.merges': 'マージコミット {n} 件', 'e.last': '最新:',
     'e.features': '{e} の機能ブランチ', 'e.oldMark': '（古い版）',
     'e.check': 'コード欠落チェック', 'e.checkBtn': 'チェック実行', 'e.checking': '確認中…',
-    'e.checkD': '{e} と {main} の差分は、すべて未リリースの機能ブランチ由来であるはずです。それ以外は、リリース済みコードの欠落か、過去のコンフリクト解消の残骸です。',
+    'e.checkD': '{e} が {main} + 未リリースの機能ブランチだけでできているか、リリース済みのコードが欠落していないかを確認します。',
+    'lc.behindT': '主な原因: {e} は {main} より {n} 件遅れています',
+    'lc.behindD': '{e} の最終更新後にリリースされたコードがまだ入っていないため、下で欠落として表示されています。まず {main} を {e} にマージしてから、もう一度チェックしてください:',
+    'lc.sinceT': '{e} の最終更新後に {main} で変更されています:',
+    'lc.fixMerge': 'このファイルは {e} の最終更新後に {main} で変更されています。{main} を {e} にマージして（上のコマンド）、もう一度チェックしてください。',
+    'lc.okT': '{e} は問題ありません', 'lc.okD': '{e} = {main} + 未リリースの機能ブランチ です。{main} と異なる {n} ファイルの差分は、すべて {f} 件の機能ブランチで説明できます。',
+    'lc.badT': '{e} に確認が必要なファイルが {n} 件あります',
+    'lc.badMissing': '{n} ファイル: {e} でリリース済みのコードが欠落しています',
+    'lc.badUnknown': '{n} ファイル: {e} に由来不明の変更があります（どの機能ブランチにもない変更）',
+    'lc.badRest': '残りの差分 {n} ファイルは、未リリースの機能ブランチ由来なので問題ありません。',
+    'lc.breakdownT': '差分の内訳（{n} ファイル）', 'lc.th.feature': '機能ブランチ', 'lc.th.files': 'ファイル数',
+    'lc.trivial': '空行・括弧のみ', 'lc.breakdownD': '複数の機能ブランチが変更しているファイルは、それぞれに数えています。',
+    'lc.missingBadge': '🔴 リリース済みコードの欠落: {n} 行', 'lc.extraBadge': '🟡 由来不明の変更: {n} 行',
+    'lc.missingExpl': '{main}（リリース済み）にある行が {e} になく、それを削除する未リリースの機能ブランチもありません。このファイルについて、{e} サーバーは本番より古いコードで動いています。',
+    'lc.extraExpl': '{e} に {main} にない行があり、どの未リリースの機能ブランチにも由来しません。多くは過去のコンフリクト解消の残骸か、{e} 上で直接行ったコミットです。',
+    'lc.touching': 'このファイルを変更している未リリースの機能ブランチ: {list}', 'lc.touchingNone': 'このファイルを変更する未リリースの機能ブランチはないため、{e} でも {main} と同じ内容のはずです。',
+    'lc.diffT': '差分（{main} → {e}）:', 'lc.legendDel': '− {main} にのみある行', 'lc.legendAdd': '+ {e} にのみある行', 'lc.legendBad': '問題の行',
+    'lc.more': '問題のある部分だけを表示しています。薄い行は機能ブランチで説明できる変更です。', 'lc.commitsT': '{e} でのこのファイルの最近の変更:',
+    'lc.fixT': '対処方法', 'lc.fixRestore': '{e} のこのファイルを {main} の内容に戻します:',
+    'lc.fixManual': '{e} でこのファイルを開き、{main} および {list} と比較してください。機能ブランチの変更は残し、問題の行を手で修正します。または {main} + 機能ブランチで {e} を再構築します（下の再構築プレビュー）。',
+    'lc.howT': 'このチェックの仕組み',
+    'lc.howBody': `<p>{e} は <b>{main}</b> + 未リリースの機能ブランチ だけでできているはずです。つまり、{e} が {main} と異なる行は、すべてどれかの機能ブランチが変更した行のはずです。</p>
+      <p>このチェックは {e} と {main} をファイルごとに比較し、すべての差分を未リリースの機能ブランチの変更と照合します:</p>
+      <ul><li>✅ どれかの機能ブランチの変更 → 説明できるので問題なし。</li>
+        <li>🔴 {main} にあるが {e} になく、それを削除する機能ブランチがない行 → <b>{e} でリリース済みのコードが欠落</b>。</li>
+        <li>🟡 {e} にあるが {main} になく、それを追加する機能ブランチがない行 → <b>由来不明の変更</b>。多くは過去のコンフリクト解消か、{e} 上で直接行ったコミットです。</li></ul>
+      <p>空白、空行、括弧だけの行は無視します。対象フォルダ: <code>{paths}</code>（リポジトリの設定で変更できます）。</p>`,
     'e.rb': '再構築プレビュー', 'e.rbBtn': 'プレビュー実行', 'e.rbRunning': '一時フォルダで試しにマージ中…',
     'e.rbD': '一時フォルダで {main} + 選択した機能ブランチを作成し、どれがコンフリクトするか確認します。プッシュはせず、作業コピーにも影響しません。',
     'e.conflictsMain': '{main} とコンフリクト',
@@ -767,15 +837,52 @@ function envSection(e) {
         ${rb ? rebuildResult(rb, cmds) : ''}</div>
     </div></div>`;
 }
+// Lost-code check result: a one-sentence answer, the breakdown, then one card per problem file
 function checkResult(c) {
-  const main = S.ov.main;
-  if (!c.problems.length) return `<div style="margin-top:8px">${badge('b-ok', t('c.noMissing'))} <span class="small muted">${esc(t('c.noMissingD', { n: c.filesDiffering, main }))}</span></div>`;
-  return `<div style="margin-top:8px">${badge('b-warn', t('c.review', { n: c.problems.length }))}
-    <div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>${esc(t('c.th.file'))}</th><th>${esc(t('c.th.touching'))}</th><th>${esc(t('c.th.missing', { main }))}</th><th>${esc(t('c.th.extra'))}</th></tr></thead><tbody>
-    ${c.problems.map(p => `<tr><td class="mono">${esc(p.file)}</td><td>${p.touching.length ? esc(p.touching.join(', ')) : `<span class="muted">${esc(t('none'))}</span>`}</td>
-      <td>${p.missingCount ? `${badge('b-bad', t('c.lines', { n: p.missingCount }))}<ul class="files">${p.missing.slice(0, 6).map(s => `<li>${esc(s.slice(0, 110))}</li>`).join('')}</ul>` : '—'}</td>
-      <td>${p.extraCount ? `${badge('b-warn', t('c.lines', { n: p.extraCount }))}<ul class="files">${p.extra.slice(0, 6).map(s => `<li>${esc(s.slice(0, 110))}</li>`).join('')}</ul>` : '—'}</td></tr>`).join('')}
-    </tbody></table></div></div>`;
+  const env = c.env, main = c.main, P = { e: env, main };
+  const miss = c.problems.filter(p => p.missingCount), unk = c.problems.filter(p => !p.missingCount);
+  let h = !c.problems.length
+    ? `<div class="lc-sum ok"><div class="lc-ic">✅</div><div><b>${esc(t('lc.okT', P))}</b><div>${esc(t('lc.okD', { ...P, n: c.filesDiffering, f: c.features.length }))}</div></div></div>`
+    : `<div class="lc-sum warn"><div class="lc-ic">⚠️</div><div><b>${esc(t('lc.badT', { ...P, n: c.problems.length }))}</b>
+        <ul>${miss.length ? `<li>🔴 ${esc(t('lc.badMissing', { ...P, n: miss.length }))}</li>` : ''}${unk.length ? `<li>🟡 ${esc(t('lc.badUnknown', { ...P, n: unk.length }))}</li>` : ''}</ul>
+        <div class="small">${esc(t('lc.badRest', { ...P, n: c.explainedFiles }))}</div></div></div>`;
+  if (c.behind && c.problems.some(p => p.releasedSince.length)) {
+    const cmd = `git checkout ${env}\ngit pull\ngit merge --no-ff ${c.remote}/${main}\ngit push`;
+    h += `<div class="lc-sum info"><div class="lc-ic">💡</div><div style="flex:1;min-width:0"><b>${esc(t('lc.behindT', { ...P, n: c.behind }))}</b>
+      <div>${esc(t('lc.behindD', P))}</div>${copyBtn(cmd)}</div></div>`;
+  }
+  h += c.problems.map(p => problemCard(p, c)).join('');
+  h += `<details class="lc-det"><summary>${esc(t('lc.breakdownT', { n: c.explainedFiles }))}</summary>
+    <table><thead><tr><th>${esc(t('lc.th.feature'))}</th><th>${esc(t('lc.th.files'))}</th></tr></thead><tbody>
+    ${c.features.map(f => `<tr><td class="mono">${esc(f.short)}</td><td>${f.files}</td></tr>`).join('')}
+    ${c.trivialFiles ? `<tr><td class="muted">${esc(t('lc.trivial'))}</td><td>${c.trivialFiles}</td></tr>` : ''}</tbody></table>
+    <div class="small muted">${esc(t('lc.breakdownD'))}</div></details>`;
+  h += `<details class="lc-det"><summary>${esc(t('lc.howT'))}</summary>${t('lc.howBody', { e: esc(env), main: esc(main), paths: esc(c.paths.join(', ')) })}</details>`;
+  return `<div style="margin-top:10px">${h}</div>`;
+}
+function problemCard(p, c) {
+  const env = c.env, main = c.main, ov = S.ov, P = { e: env, main };
+  const badges = (p.missingCount ? badge('b-bad', t('lc.missingBadge', { n: p.missingCount })) + ' ' : '') + (p.extraCount ? badge('b-warn', t('lc.extraBadge', { n: p.extraCount })) : '');
+  const expl = [p.missingCount ? t('lc.missingExpl', P) : '', p.extraCount ? t('lc.extraExpl', P) : ''].filter(Boolean);
+  const diff = p.hunks.map(hk => `<div class="lc-hunk">${esc(hk.header)}</div>` + hk.lines.map(l => {
+    const cls = l.t === '-' ? 'del' : l.t === '+' ? 'add' : 'ctx';
+    return `<div class="lc-l ${cls}${l.bad ? ' bad' : ''}"><span class="lc-s">${l.t === ' ' ? '&nbsp;' : l.t === '-' ? '−' : '+'}</span><span class="lc-c">${esc(l.s) || '&nbsp;'}</span>${l.bad ? '<span class="lc-m">◀</span>' : ''}</div>`;
+  }).join('')).join('');
+  const restore = `git checkout ${env}\ngit pull\ngit checkout ${ov.remote}/${main} -- ${p.file}\ngit commit -m "Restore ${p.file} from ${main}"\ngit push`;
+  return `<div class="lc-card">
+    <div class="row"><b class="mono" style="flex:1;word-break:break-all">${esc(p.file)}</b>${badges}</div>
+    ${expl.map(x => `<p>${esc(x)}</p>`).join('')}
+    <p class="small muted">${esc(p.touching.length ? t('lc.touching', { list: p.touching.join(', ') }) : t('lc.touchingNone', P))}</p>
+    <div class="small"><b>${esc(t('lc.diffT', P))}</b> <span class="lc-leg del">${esc(t('lc.legendDel', P))}</span> <span class="lc-leg add">${esc(t('lc.legendAdd', P))}</span> <span class="lc-leg bad">◀ ${esc(t('lc.legendBad'))}</span></div>
+    <div class="lc-diff">${diff}</div>
+    <div class="small muted">${esc(t('lc.more'))}</div>
+    ${p.commits.length ? `<div class="small" style="margin-top:8px"><b>${esc(t('lc.commitsT', P))}</b><table><tbody>${p.commits.map(x => `<tr><td class="mono">${esc(x.h)}</td><td class="nw">${esc(x.d)}</td><td>${esc(x.a)}</td><td>${esc(x.s)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    ${p.releasedSince.length ? `<div class="small" style="margin-top:8px"><b>${esc(t('lc.sinceT', P))}</b><table><tbody>${p.releasedSince.map(x => `<tr><td class="mono">${esc(x.h)}</td><td class="nw">${esc(x.d)}</td><td>${esc(x.a)}</td><td>${esc(x.s)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div style="margin-top:8px"><b>${esc(t('lc.fixT'))}</b>
+      ${p.releasedSince.length ? `<p class="small" style="margin:4px 0">${esc(t('lc.fixMerge', P))}</p>`
+        : p.touching.length ? `<p class="small" style="margin:4px 0">${esc(t('lc.fixManual', { ...P, list: p.touching.join(', ') }))}</p>`
+        : `<p class="small" style="margin:4px 0">${esc(t('lc.fixRestore', P))}</p>${copyBtn(restore)}`}</div>
+  </div>`;
 }
 function rebuildResult(rb, cmds) {
   const ov = S.ov, bad = rb.steps.filter(s => !s.ok);
@@ -1027,7 +1134,12 @@ git push</pre>
       </ol>
 
       <h3>Check dev / staging for lost code</h3>
-      <p><b>Environments → Run check.</b> "No missing code" means every difference from master comes from unreleased features. Otherwise the table lists lines that are <b>missing from master</b> (released code lost on that server) or <b>extra lines from no feature</b> (leftovers of old conflict fixes).</p>`],
+      <p><b>Environments → Run check.</b> "✅ dev is OK" means dev = master + unreleased features, nothing else. Otherwise each problem file is shown with an explanation, the code difference with the problem lines marked ◀, and a suggested fix:</p>
+      <ul>
+        <li>🔴 <b>Released code is missing</b>: the server runs older code than production for that file.</li>
+        <li>🟡 <b>Unknown change</b>: code from no feature branch, usually a leftover of an old conflict fix.</li>
+        <li>💡 If dev / staging is behind master, most "missing" lines are just the latest release: merge master first, then check again.</li>
+      </ul>`],
     ['states', 'What the labels mean', `
       <table><tbody>
         <tr><td>current</td><td>The branch starts from the latest master.</td></tr>
@@ -1132,7 +1244,12 @@ git push</pre>
       </ol>
 
       <h3>dev / staging のコード欠落を確認する</h3>
-      <p><b>環境 → チェック実行</b>。「欠落なし」なら、master との差分はすべて未リリースの機能ブランチ由来です。そうでない場合は、<b>master から欠落</b>している行（そのサーバーでリリース済みのコードが失われている）や、<b>由来不明の追加</b>行（過去のコンフリクト解消の残骸）が表示されます。</p>`],
+      <p><b>環境 → チェック実行</b>。「✅ dev は問題ありません」なら、dev = master + 未リリースの機能ブランチ だけです。そうでない場合は、問題のファイルごとに説明、問題の行に ◀ を付けた差分、対処方法が表示されます:</p>
+      <ul>
+        <li>🔴 <b>リリース済みコードの欠落</b>: そのファイルについて、サーバーが本番より古いコードで動いています。</li>
+        <li>🟡 <b>由来不明の変更</b>: どの機能ブランチにもないコードです。多くは過去のコンフリクト解消の残骸です。</li>
+        <li>💡 dev / staging が master より遅れている場合、「欠落」の多くは最新リリースが入っていないだけです。先に master をマージしてから、もう一度チェックしてください。</li>
+      </ul>`],
     ['states', 'ラベルの意味', `
       <table><tbody>
         <tr><td>最新（ベース）</td><td>最新の master からブランチが始まっています。</td></tr>

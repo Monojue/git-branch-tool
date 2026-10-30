@@ -236,29 +236,69 @@ async function graph() {
 const tagNameFor = releaseShort => releaseShort.replace(/^release\//, 'release-');
 
 // ---------------------------------------------------------------- lost-code check
-function parseDiff(text) {
+// Idea: an environment branch should be exactly main + the unreleased feature branches.
+// Every line that differs from main must therefore be a line that some unreleased feature
+// changes. A line that differs but that no feature changes is a problem:
+//   "-" line (in main, not in env)  -> released code is missing on the environment
+//   "+" line (in env, not in main)  -> unknown change: from no feature (old conflict fix, direct commit…)
+const normLine = l => l.slice(1).trim();
+const significant = t => t.length > 3;            // ignore blank lines and lone braces
+function parseDiff(text, keepLines) {
   const files = new Map(); let cur = null;
-  const norm = s => s.slice(1).trim();
   for (const l of text.split(/\r?\n/)) {
-    if (l.startsWith('diff --git ')) { const m = l.match(/ b\/(.*)$/); cur = { minus: new Set(), plus: new Set() }; files.set(m ? m[1] : l, cur); continue; }
-    if (!cur || l.startsWith('---') || l.startsWith('+++')) continue;
-    if (l[0] === '-' || l[0] === '+') { const t = norm(l); if (t.length > 3) cur[l[0] === '-' ? 'minus' : 'plus'].add(t); }
+    if (l.startsWith('diff --git ')) {
+      const m = l.match(/ b\/(.*)$/); cur = { minus: new Set(), plus: new Set(), lines: keepLines ? [] : null };
+      files.set(m ? m[1] : l, cur); continue;
+    }
+    if (!cur || l.startsWith('---') || l.startsWith('+++') || l.startsWith('index ') || l.startsWith('new file') || l.startsWith('deleted file') || l.startsWith('similarity') || l.startsWith('rename ') || l.startsWith('Binary')) continue;
+    if (l[0] === '-' || l[0] === '+') { const t = normLine(l); if (significant(t)) cur[l[0] === '-' ? 'minus' : 'plus'].add(t); }
+    if (keepLines && (l[0] === '-' || l[0] === '+' || l[0] === ' ' || l.startsWith('@@'))) cur.lines.push(l);
   }
   return files;
+}
+// Cut a file's diff into hunks and keep only the hunks that contain a problem line
+function problemHunks(lines, missing, extra) {
+  const hunks = []; let h = null;
+  for (const l of lines) {
+    if (l.startsWith('@@')) { h = { header: l.replace(/^(@@[^@]*@@).*/, '$1'), lines: [], bad: 0 }; hunks.push(h); continue; }
+    if (!h) continue;
+    const t = l[0], s = l.slice(1), n = s.trim();
+    const bad = (t === '-' && missing.has(n)) || (t === '+' && extra.has(n));
+    if (bad) h.bad++;
+    h.lines.push({ t, s, bad });
+  }
+  const keep = hunks.filter(x => x.bad);
+  let budget = 260;                                  // keep the page readable for huge files
+  return keep.filter(x => (budget -= x.lines.length) > 0 || x === keep[0]).map(({ header, lines }) => ({ header, lines }));
 }
 async function envCheck(env) {
   const ref = R(env); if (!ENVS.includes(ref)) throw new Error('unknown environment ' + env);
   const ov = await overview();
-  const D = parseDiff(await out(['diff', '-w', MAIN, ref, '--', ...CFG.checkPaths]));
+  const D = parseDiff(await out(['diff', '-w', MAIN, ref, '--', ...CFG.checkPaths]), true);
   const F = await pool(ov.features, 4, async f => ({ f, d: parseDiff(await out(['diff', '-w', `${MAIN}...${f.name}`, '--', ...CFG.checkPaths])) }));
-  const problems = [];
+  const problems = [], explainedBy = {};
+  let trivial = 0;
   for (const [file, d] of D) {
     const exM = new Set(), exP = new Set(), touching = [];
     for (const { f, d: fd } of F) { const x = fd.get(file); if (!x) continue; touching.push(f.short); x.minus.forEach(s => exM.add(s)); x.plus.forEach(s => exP.add(s)); }
     const missing = [...d.minus].filter(s => !exM.has(s)), extra = [...d.plus].filter(s => !exP.has(s));
-    if (missing.length || extra.length) problems.push({ file, touching, missing: missing.slice(0, 40), extra: extra.slice(0, 40), missingCount: missing.length, extraCount: extra.length });
+    if (!missing.length && !extra.length) {
+      if (touching.length) touching.forEach(s => { explainedBy[s] = (explainedBy[s] || 0) + 1; }); else trivial++;
+      continue;
+    }
+    const commits = lines(await out(['log', '-3', COMMIT_FMT, `${MAIN}..${ref}`, '--', file])).map(parseCommit);
+    // changed in main after the environment last received main: simply not merged yet
+    const releasedSince = lines(await out(['log', '-5', COMMIT_FMT, `${ref}..${MAIN}`, '--', file])).map(parseCommit);
+    problems.push({
+      file, touching, missingCount: missing.length, extraCount: extra.length,
+      hunks: problemHunks(d.lines, new Set(missing), new Set(extra)), commits, releasedSince,
+    });
   }
-  return { env, filesDiffering: D.size, problems };
+  const behind = +(await out(['rev-list', '--count', `${ref}..${MAIN}`])).trim();
+  // most serious first: released code missing, then unknown changes
+  problems.sort((a, b) => (b.missingCount > 0) - (a.missingCount > 0) || (b.missingCount + b.extraCount) - (a.missingCount + a.extraCount));
+  const features = Object.entries(explainedBy).map(([short, files]) => ({ short, files })).sort((a, b) => b.files - a.files);
+  return { env, main: CFG.main, remote: CFG.remote, behind, paths: CFG.checkPaths, filesDiffering: D.size, explainedFiles: D.size - problems.length, trivialFiles: trivial, features, problems };
 }
 
 // ---------------------------------------------------------------- conflicts between features
