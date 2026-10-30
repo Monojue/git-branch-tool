@@ -432,6 +432,7 @@ const I18N = {
     'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
+    'n.mAuto': 'This branch', 'n.mAutoD': 'The branch itself is always shown completely.',
     'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: Ctrl + mouse wheel over the graph (or these buttons). Drag to move, Shift + wheel to scroll sideways.',
     'n.f.ctxD': 'Other branches are faded; drag the scroll bars or zoom to look around.',
     'n.f.offshoots': 'Work started on top of this branch', 'n.f.offshootsD': 'Commits made directly on top of this branch somewhere else. That work depends on this branch.',
@@ -612,6 +613,7 @@ const I18N = {
     'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
+    'n.mAuto': 'このブランチの期間', 'n.mAutoD': '検索したブランチは常に全体を表示します。',
     'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: グラフ上で Ctrl + マウスホイール（またはこのボタン）。ドラッグで移動、Shift + ホイールで横スクロール。',
     'n.f.ctxD': '他のブランチは薄く表示しています。スクロールやズームで周りも確認できます。',
     'n.f.offshoots': 'このブランチの上で始まった作業', 'n.f.offshootsD': 'このブランチの上に直接作られた別のコミットです。その作業はこのブランチに依存しています。',
@@ -1105,6 +1107,9 @@ async function vNetwork() {
       ${q ? `<label class="chk small"><input type="checkbox" id="nCtx" ${NET.ctx !== false ? 'checked' : ''}> ${esc(t('n.s.ctx'))}</label>` : ''}
       <span class="small muted">${esc(t('n.s.hint'))}</span>
     </div>
+    ${!q ? '' : `<div class="net-controls">
+      <div><span class="small muted">${esc(t('n.period'))} </span><div class="seg" id="nFRange">${[['auto', 'n.mAuto'], [1, 'n.m1'], [3, 'n.m3'], [6, 'n.m6'], [0, 'n.all']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${String(NET.frange ?? 'auto') === String(v)}">${esc(t(k))}</button>`).join('')}</div></div>
+      <span class="small muted">${esc(t('n.mAutoD'))}</span></div>`}
     ${q ? '' : `<div class="net-controls">
       <div><span class="small muted">${esc(t('n.period'))} </span><div class="seg" id="nRange">${[[1, 'n.m1'], [3, 'n.m3'], [6, 'n.m6'], [0, 'n.all']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${NET.range === v}">${esc(t(k))}</button>`).join('')}</div></div>
       <div><span class="small muted">${esc(t('n.compare'))} </span><div class="seg" id="nAfter">${[['branches', 'n.branches'], ['full', 'n.full']].map(([v, k]) => `<button data-v="${v}" aria-pressed="${NET.after === v}">${esc(t(k))}</button>`).join('')}</div></div>
@@ -1117,6 +1122,12 @@ async function vNetwork() {
   setupAutocomplete($('#nSearch'), $('#nAc'), search);
   if ($('#nClear')) $('#nClear').onclick = () => search('');
   if ($('#nCtx')) $('#nCtx').onchange = e => { NET.ctx = e.target.checked; save(); if (S.graph) drawNetwork(S.graph, S.netQuery); };
+  if (q) $('#nFRange').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    NET.frange = b.dataset.v === 'auto' ? 'auto' : +b.dataset.v; save();
+    document.querySelectorAll('#nFRange button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    if (S.graph) drawNetwork(S.graph, S.netQuery);
+  };
   if (!q) {
     $('#nRange').onclick = e => { const b = e.target.closest('button'); if (b) { NET.range = +b.dataset.v; save(); vNetwork(); } };
     $('#nAfter').onclick = e => { const b = e.target.closest('button'); if (b) { NET.after = b.dataset.v; save(); vNetwork(); } };
@@ -1467,10 +1478,16 @@ function drawNetwork(G, query) {
     if (ctx) {
       // the whole network around this branch (from a week before it started), the branch highlighted
       const dates = [...nodes].map(h => (byHash.get(h) || {}).d).filter(Boolean).sort();
+      // period: the branch's own period (from a week before it started), or a chosen period;
+      // a chosen period never cuts off the branch itself
       const from = new Date(dates[0] || today); from.setDate(from.getDate() - 7);
+      const fr = NET.frange ?? 'auto';
+      let since = from.toISOString().slice(0, 10);
+      if (fr === 0) since = null;
+      else if (fr !== 'auto') { const d = new Date(today); d.setMonth(d.getMonth() - fr); const chosen = d.toISOString().slice(0, 10); if (chosen < since) since = chosen; }
       const ctxLabels = [P.main, ...P.envs.map(e => P.remote + '/' + e.name)].filter(refHash).map(n => ({ name: short(n), h: refHash(n), type: 'ctx' }));
       view = { list: buildView('now').list, labels: labels.concat(ctxLabels.filter(l => !labels.some(x => x.h === l.h))), focus: true };
-      L = layout(view, from.toISOString().slice(0, 10));
+      L = layout(view, since);
       pnlOpt = { ...zoomOpt, hl: nodes };
     } else {
       view = { list: G.commits.filter(c => nodes.has(c.h)), labels, focus: true };
