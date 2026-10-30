@@ -83,6 +83,11 @@ details[open]>summary .chev{transform:rotate(90deg)}
 #netPanels .scroll circle.c{cursor:pointer}
 #netDetail:not(:empty){margin-top:16px}
 .selmark{pointer-events:none}
+.netsvg path.hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
+.netsvg.line-active>g:not(.linesel):not(.selmark):not(.axis):not(.hits){opacity:.25;transition:opacity .15s}
+.netsvg .linesel{pointer-events:none}
+.netsvg .linesel path{fill:none;stroke-width:5;stroke-linecap:round;filter:drop-shadow(0 0 3px rgba(37,99,235,.55))}
+.netsvg .linesel circle{stroke-width:2.6}
 .selmark .selring{fill:none;stroke:var(--accent);stroke-width:2.4}
 .selmark .selpulse{fill:var(--accent);fill-opacity:.18;stroke:var(--accent);stroke-opacity:.5;stroke-width:1;transform-box:fill-box;transform-origin:center;animation:selpulse 1.6s ease-out infinite}
 @keyframes selpulse{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.35);opacity:0}}
@@ -1231,17 +1236,21 @@ function drawNetwork(G, query) {
     for (let i = n - 1; i >= 0; i--) { const m = L.list[i].d.slice(0, 7); if (m > maxM) { const x = PADL + (n - 1 - i) * DX; s += `<line x1="${x}" y1="14" x2="${x}" y2="${H - 6}" stroke-dasharray="2 4"/>`; if (x - lastX > 52) { s += `<text x="${x + 3}" y="12">${m}</text>`; lastX = x; } maxM = m; } }
     s += '</g>';
     const isHl = h => !hl || hl.has(h);
-    let dimEdges = '', hlEdges = '', dimDots = '', hlDots = '';
-    for (const e of L.edges) {
+    let dimEdges = '', hlEdges = '', dimDots = '', hlDots = '', hits = '';
+    L.edges.forEach((e, i) => {
       const c = L.list[L.idx.get(e.from)], xc = X(e.from), yc = Y(L.laneOf.get(e.from)), yk = Y(e.lane), cl = col(e.lane);
       const on = isHl(e.from) && (e.dangling || isHl(e.to));
-      if (e.dangling) { const p = `<path d="M${xc},${yc} L${xc - DX},${yk} L${PADL - 20},${yk}" stroke="${cl}" stroke-opacity=".35" stroke-dasharray="3 3"/>`; on ? hlEdges += p : dimEdges += p; continue; }
-      const xp = X(e.to), yp = Y(L.laneOf.get(e.to)); let d;
-      if (xc - xp <= DX) { const mx = (xc + xp) / 2; d = `M${xc},${yc} C${mx},${yc} ${mx},${yp} ${xp},${yp}`; }
-      else { d = `M${xc},${yc}` + (yk !== yc ? ` C${xc - DX / 2},${yc} ${xc - DX / 2},${yk} ${xc - DX},${yk}` : ` L${xc - DX},${yk}`) + ` L${xp + DX},${yk}` + (yk !== yp ? ` C${xp + DX / 2},${yk} ${xp + DX / 2},${yp} ${xp},${yp}` : ` L${xp},${yp}`); }
-      const p = `<path d="${d}" stroke="${cl}"${c.syn ? ' stroke-dasharray="4 3"' : ''}/>`;
+      let d, extra = c.syn ? ' stroke-dasharray="4 3"' : '';
+      if (e.dangling) { d = `M${xc},${yc} L${xc - DX},${yk} L${PADL - 20},${yk}`; extra = ' stroke-opacity=".35" stroke-dasharray="3 3"'; }
+      else {
+        const xp = X(e.to), yp = Y(L.laneOf.get(e.to));
+        if (xc - xp <= DX) { const mx = (xc + xp) / 2; d = `M${xc},${yc} C${mx},${yc} ${mx},${yp} ${xp},${yp}`; }
+        else { d = `M${xc},${yc}` + (yk !== yc ? ` C${xc - DX / 2},${yc} ${xc - DX / 2},${yk} ${xc - DX},${yk}` : ` L${xc - DX},${yk}`) + ` L${xp + DX},${yk}` + (yk !== yp ? ` C${xp + DX / 2},${yk} ${xp + DX / 2},${yp} ${xp},${yp}` : ` L${xp},${yp}`); }
+      }
+      const p = `<path data-e="${i}" d="${d}" stroke="${cl}"${extra}/>`;
       on ? hlEdges += p : dimEdges += p;
-    }
+      hits += `<path class="hit" data-e="${i}" d="${d}"/>`;   // wide invisible click area for the line
+    });
     for (const c of L.list) {
       const k = L.laneOf.get(c.h), m = c.p.length > 1, on = isHl(c.h), r = (m ? R - .8 : R) * (hl && on ? 1.35 : 1);
       const dot = `<circle class="c" data-h="${c.h}" cx="${X(c.h)}" cy="${Y(k)}" r="${r}" fill="${m ? 'var(--panel)' : col(k)}" stroke="${col(k)}" stroke-width="${hl && on ? 2.2 : 1.6}"${c.syn ? ' stroke-dasharray="2 2"' : ''}/>`;
@@ -1249,7 +1258,7 @@ function drawNetwork(G, query) {
     }
     // faded layer first, the highlighted branch on top
     if (dimEdges || dimDots) s += `<g class="${hl ? 'dimmed' : ''}"><g fill="none" stroke-width="1.6" stroke-linecap="round">${dimEdges}</g><g>${dimDots}</g></g>`;
-    s += `<g fill="none" stroke-width="${hl ? 2.8 : 1.6}" stroke-linecap="round">${hlEdges}</g><g>${hlDots}</g>`;
+    s += `<g fill="none" stroke-width="${hl ? 2.8 : 1.6}" stroke-linecap="round">${hlEdges}</g><g class="hits">${hits}</g><g>${hlDots}</g>`;
     if (NET.labels || hl) {
       s += '<g>'; const placed = [];
       const hit = (x, y, w) => placed.some(p => x < p.x + p.w && p.x < x + w && Math.abs(p.y - y) < 12);
@@ -1267,7 +1276,7 @@ function drawNetwork(G, query) {
     el.innerHTML = `<header><h2>${esc(title)}</h2>${zoomUi}<div class="stats" ${view.focus ? 'hidden' : ''}><span class="stat">${esc(t('n.st.branches'))} <b>${st.branches}</b>${dl('branches')}</span><span class="stat">${esc(t('n.st.tags'))} <b>${st.tags}</b>${dl('tags', false)}</span><span class="stat">${esc(t('n.st.commits'))} <b>${st.commits}</b>${dl('commits')}</span><span class="stat">${esc(t('n.st.merges'))} <b>${st.merges}</b>${dl('merges')}</span><span class="stat">${esc(t('n.st.lanes'))} <b>${st.lanes}</b>${dl('lanes')}</span></div><div class="hint">${esc(desc)}</div></header><div class="scroll">${s}</div>`;
     const sc = el.querySelector('.scroll'), tip = $('#tip');
     sc.addEventListener('mousemove', ev => {
-      const tg = ev.target.closest('circle.c'); if (!tg) { tip.style.display = 'none'; return; }
+      const tg = dotAt(ev); if (!tg) { tip.style.display = 'none'; return; }
       const c = L.list[L.idx.get(tg.dataset.h)], ls = (byH.get(c.h) || []).map(l => l.name).join(', ');
       tip.innerHTML = `<div class="h">${c.syn ? esc(t('n.simulated')) : c.h.slice(0, 8)} · ${esc(c.d)} · ${esc(c.a)}</div><div>${esc(c.s)}</div>${ls ? `<div class="mono small" style="margin-top:4px">${esc(ls)}</div>` : ''}`;
       tip.style.display = 'block';
@@ -1277,9 +1286,36 @@ function drawNetwork(G, query) {
     sc.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
     // ---- mouse control: drag to move, wheel to zoom (at the pointer), Shift + wheel to scroll sideways
     let drag = null, dragged = false;
+    // ---- line selection: click a line to highlight the whole line and bring it to the front; click empty space to reset
+    const byFrom = new Map(), byTo = new Map();
+    L.edges.forEach((e, i) => { (byFrom.get(e.from) || byFrom.set(e.from, []).get(e.from)).push(i); if (!e.dangling) (byTo.get(e.to) || byTo.set(e.to, []).get(e.to)).push(i); });
+    const svgEl = () => sc.querySelector('svg');
+    const clearLine = () => { const s = svgEl(); s.classList.remove('line-active'); s.querySelectorAll('.linesel').forEach(x => x.remove()); };
+    const selectLine = i0 => {
+      clearLine();
+      const lane = L.edges[i0].lane, chain = new Set([i0]);
+      // follow the same line (same lane, connected commits) towards older and newer commits
+      for (let e = L.edges[i0]; e && !e.dangling;) { const nx = (byFrom.get(e.to) || []).find(j => L.edges[j].lane === lane && !chain.has(j)); if (nx == null) break; chain.add(nx); e = L.edges[nx]; }
+      for (let e = L.edges[i0]; e;) { const pv = (byTo.get(e.from) || []).find(j => L.edges[j].lane === lane && !chain.has(j)); if (pv == null) break; chain.add(pv); e = L.edges[pv]; }
+      const s = svgEl(), NS = 'http://www.w3.org/2000/svg', g = document.createElementNS(NS, 'g'), dots = new Set();
+      g.setAttribute('class', 'linesel');
+      chain.forEach(j => {
+        const src = s.querySelector(`path[data-e="${j}"]:not(.hit)`);
+        if (src) { const cp = src.cloneNode(); cp.removeAttribute('stroke-opacity'); g.appendChild(cp); }
+        const e = L.edges[j]; dots.add(e.from); if (!e.dangling) dots.add(e.to);
+      });
+      dots.forEach(h => { const d = s.querySelector(`circle.c[data-h="${h}"]`); if (d) g.appendChild(d.cloneNode()); });
+      s.insertBefore(g, s.querySelector('.selmark'));   // the selected-commit ring stays on top
+      s.classList.add('line-active');
+    };
+    // a dot under the pointer wins over a line (dots can sit below the wide line click areas)
+    const dotAt = ev => ev.target.closest('circle.c') || (ev.target.classList && ev.target.classList.contains('hit') ? document.elementsFromPoint(ev.clientX, ev.clientY).find(x => x.matches && x.matches('circle.c')) : null);
     sc.addEventListener('click', ev => {
       if (dragged) { dragged = false; return; }       // the end of a drag is not a click
-      const tg = ev.target.closest('circle.c'); if (tg && !tg.dataset.h.startsWith('sim-')) showCommit(tg.dataset.h);
+      const dot = dotAt(ev);
+      if (dot) { if (!dot.dataset.h.startsWith('sim-')) showCommit(dot.dataset.h); return; }
+      const line = ev.target.closest('path[data-e]');
+      if (line) selectLine(+line.dataset.e); else clearLine();
     });
     sc.addEventListener('pointerdown', ev => {
       if (ev.button !== 0) return;
@@ -1516,7 +1552,7 @@ function containingRefs(G, h) {
 function markSelected(h, reveal) {
   document.querySelectorAll('#netPanels .selmark').forEach(x => x.remove());
   if (!h) return;
-  document.querySelectorAll(`#netPanels circle.c[data-h^="${h.slice(0, 12)}"]`).forEach(dot => {
+  [...document.querySelectorAll(`#netPanels circle.c[data-h^="${h.slice(0, 12)}"]`)].filter(d => !d.closest('.linesel')).forEach(dot => {
     const svg = dot.ownerSVGElement, NS = 'http://www.w3.org/2000/svg', cx = dot.getAttribute('cx'), cy = dot.getAttribute('cy'), r = +dot.getAttribute('r');
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'selmark');
     [['selpulse', r * 3.2], ['selring', r * 2.2]].forEach(([cls, rr]) => {
@@ -1586,7 +1622,7 @@ const GUIDE = {
         <tr><td><a href="#" data-go="releases">Releases</a></td><td>Each open <code>release/…</code> branch: which features it contains and whether each one is up to date, commits that came from no feature branch, merges from dev / staging, features that are tested but not included, and release notes to copy.</td></tr>
         <tr><td><a href="#" data-go="envs">Environments</a></td><td>dev and staging: which features they carry, the <b>Lost-code check</b>, and the <b>Rebuild preview</b> (a trial build of master + selected features in a temporary folder).</td></tr>
         <tr><td><a href="#" data-go="cleanup">Cleanup</a></td><td>Delete merged branches on Backlog, turn old release branches into tags, delete merged branches on your PC, and review your stashes.</td></tr>
-        <tr><td><a href="#" data-go="network">Network</a></td><td>The commit graph as Backlog draws it today, compared with how it will look after cleanup. <b>Search</b> a branch or ticket number (e.g. <code>1131</code>) to see only that branch: where it started, its own commits, where it was merged (latest or old version) and what was merged into it. Search a commit hash to see which branches contain it ("is this fix on staging yet?"). Click any dot for the commit's details and changed files. Press <code>/</code> to search.</td></tr>
+        <tr><td><a href="#" data-go="network">Network</a></td><td>The commit graph as Backlog draws it today, compared with how it will look after cleanup. <b>Search</b> a branch or ticket number (e.g. <code>1131</code>) to see only that branch: where it started, its own commits, where it was merged (latest or old version) and what was merged into it. Search a commit hash to see which branches contain it ("is this fix on staging yet?"). Click any dot for the commit's details and changed files; click a line to highlight that whole line (click an empty spot to go back). Ctrl + mouse wheel zooms, dragging moves. Press <code>/</code> to search.</td></tr>
       </tbody></table>`],
     ['tasks', 'Everyday tasks', `
       <h3>Start a new ticket</h3>
@@ -1703,7 +1739,7 @@ git push</pre>
         <tr><td><a href="#" data-go="releases">リリース管理</a></td><td>作業中の <code>release/…</code> ブランチごとに、含まれる機能ブランチとそれぞれが最新か、機能ブランチ由来でないコミット、dev / staging からのマージ、テスト済みだが未反映の機能、コピーできるリリースノートを表示します。</td></tr>
         <tr><td><a href="#" data-go="envs">環境</a></td><td>dev と staging に含まれる機能ブランチ、<b>コード欠落チェック</b>、<b>再構築プレビュー</b>（一時フォルダで master + 選択した機能ブランチを試しに作成）です。</td></tr>
         <tr><td><a href="#" data-go="cleanup">クリーンアップ</a></td><td>Backlog上のマージ済みブランチの削除、古いリリースブランチのタグ化、PC上のマージ済みブランチの削除、スタッシュの確認ができます。</td></tr>
-        <tr><td><a href="#" data-go="network">ネットワーク</a></td><td>Backlogが表示する現在のコミットグラフと、クリーンアップ後の姿を比較します。ブランチ名やチケット番号（例: <code>1131</code>）で<b>検索</b>すると、そのブランチだけを表示します: どこから作成したか、自分のコミット、どこにマージされたか（最新か古い版か）、何がマージされているか。コミットハッシュで検索すると、そのコミットを含むブランチが分かります（「この修正はもう staging に入っている？」）。点をクリックすると、コミットの詳細と変更ファイルを表示します。<code>/</code> キーで検索できます。</td></tr>
+        <tr><td><a href="#" data-go="network">ネットワーク</a></td><td>Backlogが表示する現在のコミットグラフと、クリーンアップ後の姿を比較します。ブランチ名やチケット番号（例: <code>1131</code>）で<b>検索</b>すると、そのブランチだけを表示します: どこから作成したか、自分のコミット、どこにマージされたか（最新か古い版か）、何がマージされているか。コミットハッシュで検索すると、そのコミットを含むブランチが分かります（「この修正はもう staging に入っている？」）。点をクリックするとコミットの詳細と変更ファイルを、線をクリックするとその線全体を強調表示します（何もない所をクリックで元に戻ります）。Ctrl + マウスホイールでズーム、ドラッグで移動できます。<code>/</code> キーで検索できます。</td></tr>
       </tbody></table>`],
     ['tasks', 'よくある作業', `
       <h3>新しいチケットを始める</h3>
