@@ -236,6 +236,8 @@ const I18N = {
     'repo.none': 'Choose the git repository to work with.', 'repo.choose': 'Choose repository…', 'repo.noEnvCandidates': 'No other long-lived branches found.',
     'nav.overview': 'Overview', 'nav.features': 'Features', 'nav.envs': 'Environments', 'nav.cleanup': 'Cleanup', 'nav.network': 'Network',
     'nav.releases': 'Releases', 'nav.guide': 'Guide',
+    'ov.envT': 'Features on each environment', 'ov.envOld': '{n} old',
+    'ov.envHint': 'Where each unreleased feature branch is. latest = the newest version of the branch; old version = newer commits are not there yet. Click a row for details.',
     'ov.cardReleases': 'Open releases', 'ov.cardReleasesBad': p => `${pl(p.n, 'feature', 'features')} outdated`, 'ov.cardReleasesOk': 'all features up to date', 'ov.cardReleasesNone': 'no open release branch',
     's.relOutdated': p => `${p.r}: ${pl(p.n, 'feature is', 'features are')} outdated`,
     's.relOutdatedD': '{list} have newer commits that are not in the release yet. They would be missing from the release.',
@@ -394,6 +396,8 @@ const I18N = {
     'repo.none': '使用するgitリポジトリを選択してください。', 'repo.choose': 'リポジトリを選択…', 'repo.noEnvCandidates': 'ほかに常設のブランチはありません。',
     'nav.overview': '概要', 'nav.features': '機能ブランチ', 'nav.envs': '環境', 'nav.cleanup': 'クリーンアップ', 'nav.network': 'ネットワーク',
     'nav.releases': 'リリース管理', 'nav.guide': '使い方',
+    'ov.envT': '環境ごとの機能ブランチ', 'ov.envOld': '古い版 {n}',
+    'ov.envHint': '未リリースの機能ブランチがどこに入っているかの一覧です。最新 = ブランチの最新版、古い版 = 新しいコミットがまだ入っていない状態です。行をクリックすると詳細を表示します。',
     'ov.cardReleases': '作業中のリリース', 'ov.cardReleasesBad': '古い機能ブランチ {n} 件', 'ov.cardReleasesOk': 'すべての機能ブランチが最新', 'ov.cardReleasesNone': '作業中のリリースブランチなし',
     's.relOutdated': '{r}: 古い版の機能ブランチが {n} 件あります',
     's.relOutdatedD': '{list} にはリリースに未反映の新しいコミットがあります。このままではリリースから漏れます。',
@@ -697,11 +701,28 @@ function vOverview() {
         return card(t('ov.cardReleases'), rs.length, rs.length ? (bad ? t('ov.cardReleasesBad', { n: bad }) : t('ov.cardReleasesOk')) : t('ov.cardReleasesNone'), 'releases', bad ? 'bad' : undefined); })()}
       ${ov.envs.map(e => card(e.name, e.behind ? t('ov.envBehind', { n: e.behind }) : t('ov.envUpToDate'), t('ov.envSub', { a: e.ahead, main, m: e.merges, b: e.mergeBases }), 'envs', e.behind || e.mergeBases > 1 ? 'warn' : 'ok')).join('')}
     </div>
+    ${envMatrix()}
     <div class="section"><header><h2>${esc(t('ov.steps'))}</h2></header>
       ${steps.length ? `<ul class="steps">${steps.map(([lvl, ti, s, tab]) => `<li><span class="dot" style="background:var(--${lvl})"></span><div class="t">${esc(ti)}<small>${esc(s)}</small></div>${tab ? `<button class="btn sm" data-go="${tab}">${esc(t('open'))}</button>` : ''}</li>`).join('')}</ul>` : `<div class="empty">${esc(t('ov.noSteps'))}</div>`}
     </div>
   </div>`;
   $('#main').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
+  $('#main').querySelectorAll('[data-feat]').forEach(tr => tr.addEventListener('click', () => { S.openRows.add(tr.dataset.feat); show('features'); }));
+}
+// Where is each unreleased feature: one column per environment branch, plus open releases
+function envMatrix() {
+  const ov = S.ov, envs = ov.envNames;
+  if (!ov.features.length) return '';
+  const rank = f => envs.reduce((n, e) => n + (f.env[e] === 'full' ? 2 : f.env[e] === 'old' ? 1 : 0), 0);
+  const rows = ov.features.slice().sort((a, b) => rank(b) - rank(a) || (a.ticket || '').localeCompare(b.ticket || ''));
+  const cell = s => s === 'full' ? badge('b-ok', t('f.latest')) : s === 'old' ? badge('b-warn', t('f.oldVersion')) : '<span class="muted">—</span>';
+  const head = e => {
+    const n = ov.features.filter(f => f.env[e] !== 'none').length, old = ov.features.filter(f => f.env[e] === 'old').length;
+    return `<th>${esc(e)} <span class="muted" style="font-weight:400">(${n}${old ? ` · ${esc(t('ov.envOld', { n: old }))}` : ''})</span></th>`;
+  };
+  return `<div class="section"><header><h2>${esc(t('ov.envT'))}</h2><div class="hint">${esc(t('ov.envHint'))}</div></header>
+    <div class="tbl-wrap"><table><thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th>${envs.map(head).join('')}<th>${esc(t('f.th.release'))}</th></tr></thead>
+    <tbody>${rows.map(f => `<tr data-feat="${esc(f.short)}" style="cursor:pointer"><td class="mono">${esc(f.short)}</td><td>${esc(f.authors.join(', '))}</td>${envs.map(e => `<td>${cell(f.env[e])}</td>`).join('')}<td>${relCell(f)}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 function card(title, big, sub, go, tone) {
   const color = tone ? `style="color:var(--${tone})"` : '';
