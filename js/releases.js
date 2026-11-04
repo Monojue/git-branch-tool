@@ -94,7 +94,7 @@ function releaseSection(r) {
   })].join('\n');
   const sec = name => `rel-${r.name.replace(/[^A-Za-z0-9]/g, '-')}-${name}`, chk = releaseChecks(r, sec);
   return `<div class="section">
-    <header><h2>${esc(r.name)}</h2>${chk.badge}${base}${conf}<span class="pill">${esc(t('rel.ahead', { n: r.ahead, main }))}</span>
+    <header><h2>${esc(r.name)}</h2>${r.local ? badge('b-info', t('rel.local')) : ''}${chk.badge}${base}${conf}<span class="pill">${esc(t('rel.ahead', { n: r.ahead, main }))}</span>
       <div class="hint">${esc(t('e.last'))} ${esc(r.date)} ${esc(r.author)} — ${esc(r.subject)}</div></header>
     <div class="body grid" style="gap:18px">
       ${chk.html}

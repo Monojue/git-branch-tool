@@ -78,7 +78,7 @@ async function releaseInfo(rel, refs, features) {
   const candidates = features.filter(f => !inRel.has(f.short) && Object.values(f.env).some(s => s !== 'none'))
     .map(f => ({ short: f.short, ticket: f.ticket, authors: f.authors, env: f.env, conflicts: f.conflicts }));
 
-  return { name: rel.short, ref: rel.name, date: rel.date, author: rel.author, subject: rel.subject,
+  return { name: rel.short, ref: rel.name, local: !!rel.local, date: rel.date, author: rel.author, subject: rel.subject,
     ahead, behind, conflicts, included: included.concat(deleted), envMerges, direct, candidates };
 }
 
@@ -111,6 +111,12 @@ async function overview(force) {
   refs.forEach(r => { r.kind = kindOf(r.name); r.merged = r.kind !== 'main' && merged.has(r.name); r.short = short(r.name); r.ticket = ticketOf(r.name); });
 
   const openReleases = refs.filter(r => r.kind === 'release' && !r.merged);
+  // TEMPORARY (for testing the Releases screen): also local release/* branches that are not on
+  // the remote and not merged into main. Revert this commit after testing.
+  const localRels = lines(await out(['for-each-ref', 'refs/heads/release', '--format=%(refname:short)%09%(objectname)%09%(committerdate:short)%09%(authorname)%09%(subject)']))
+    .map(l => { const [name, h, date, author, subject] = l.split('\t'); return { name, h, date, author, subject, short: name, kind: 'release', local: true }; })
+    .filter(r => !refs.some(x => x.short === r.name));
+  for (const r of localRels) if (!(await isAncestor(r.name, MAIN))) openReleases.push(r);
   const unreleased = refs.filter(r => (r.kind === 'feature' || r.kind === 'hotfix' || r.kind === 'other') && !r.merged);
 
   // per-feature details
