@@ -24,11 +24,13 @@ const defaultCheckPaths = root => fs.existsSync(path.join(root, 'src')) ? ['src'
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 const CONF = (() => {
   const raw = readJson(CONFIG_FILE);
-  const conf = { port: raw.port || 4777, current: raw.current || null, recent: raw.recent || [], repos: raw.repos || {} };
+  // keep every saved field (API keys, flags, …); only fill in defaults
+  const conf = { ...raw, port: raw.port || 4777, current: raw.current || null, recent: raw.recent || [], repos: raw.repos || {}, backlogKeys: raw.backlogKeys || {} };
   if (raw.repo && !raw.repos) {            // migrate the old single-repository format
     const p = path.resolve(__dirname, raw.repo);
     conf.repos[p] = { remote: raw.remote || 'origin', main: raw.main || 'master', envs: raw.envs || ['dev', 'staging'], checkPaths: raw.checkPaths || defaultCheckPaths(p) };
     conf.current = p; conf.recent = [p];
+    ['repo', 'remote', 'main', 'envs', 'checkPaths'].forEach(k => delete conf[k]);
   }
   return conf;
 })();
