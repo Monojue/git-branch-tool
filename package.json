@@ -1,0 +1,9 @@
+{
+  "name": "git-branch-tool",
+  "private": true,
+  "description": "Local web tool for inspecting and cleaning up git branches",
+  "scripts": {
+    "start": "node server.js --open",
+    "test": "node --test test/*.test.js"
+  }
+}

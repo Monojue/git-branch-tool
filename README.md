@@ -23,9 +23,23 @@ If `./start.sh` or `start.command` is not allowed to run (for example after copy
 Windows), run `chmod +x start.sh start.command` once.
 
 ## Files
-- `server.js`: local server (talks to git)
-- `index.html`: the page
+- `server.js`: local server (talks to git): the analysis behind each screen, the actions, HTTP
+- `lib/`: `config.js` (settings), `git.js` (running git), `diff.js` (lost-code diff analysis)
+- `index.html`, `app.css`, `js/*.js`: the page (one script per screen; `i18n.js` holds all texts in English and Japanese)
+- `test/`: automated tests
 - `config.json`: your repository list and settings (created by the tool; personal, not shared)
+
+## For developers
+Run the tests before sharing a change:
+
+```
+npm test
+```
+
+They build a small git repository with a known situation (released and unreleased features, a conflict
+with master, an outdated release, an unexplained change on dev; see `test/fixture.js`), start the real
+server on it with its own settings file (`GBT_CONFIG`) and check what every screen receives, including the
+safety rules of the cleanup actions. Nothing outside a temporary folder is touched. Needs only Node.js and git.
 
 ---
 
