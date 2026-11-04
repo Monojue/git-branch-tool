@@ -19,6 +19,10 @@ The tool opens at http://localhost:4777. With `start.vbs` there is no window and
 With `start.bat`, `start.command` or `start.sh`, keep the console / terminal window open while you use it;
 close it or press Ctrl+C to stop. Starting it again while it runs just opens the browser.
 
+Windows desktop shortcut: double-click `create-shortcut.bat` once. It puts a **Git Branch Tool** shortcut
+(with the tool's icon, starting `start.vbs`) on the desktop; right-click it to pin it to the taskbar or Start.
+Run it again after moving the folder.
+
 If `./start.sh` or `start.command` is not allowed to run (for example after copying the folder from
 Windows), run `chmod +x start.sh start.command` once.
 
@@ -63,6 +67,10 @@ gitリポジトリのブランチの状態（機能ブランチ、リリース�
 http://localhost:4777 で開きます。`start.vbs` の場合はウィンドウがなく、終了操作も不要です。
 `start.bat`・`start.command`・`start.sh` の場合は、使用中はコンソール／ターミナルのウィンドウを閉じないでください
 （閉じるか Ctrl+C で終了）。起動中にもう一度起動すると、ブラウザで開くだけです。
+
+Windowsのデスクトップショートカット: `create-shortcut.bat` を一度ダブルクリックすると、デスクトップに
+**Git Branch Tool** のショートカット（ツールのアイコン付き、`start.vbs` で起動）が作成されます。
+右クリックでタスクバーやスタートにピン留めできます。フォルダを移動した場合はもう一度実行してください。
 
 `./start.sh` や `start.command` が実行できない場合（Windowsからフォルダをコピーした場合など）は、
 一度 `chmod +x start.sh start.command` を実行してください。
