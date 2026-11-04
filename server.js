@@ -488,17 +488,31 @@ async function issueInfo(key) {
   const hit = issueCache.get(key);
   if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.data;
   const host = issueHost(url);
-  let r;
-  try { r = await fetch(`https://${host}/api/v2/issues/${encodeURIComponent(key)}?apiKey=${encodeURIComponent(apiKey)}`, { signal: AbortSignal.timeout(8000) }); }
-  catch (e) { throw new Error('Backlog could not be reached'); }
-  if (r.status === 401 || r.status === 403) throw new Error('Backlog API key was rejected');
+  const call = async p => {
+    let r;
+    try { r = await fetch(`https://${host}/api/v2/${p}${p.includes('?') ? '&' : '?'}apiKey=${encodeURIComponent(apiKey)}`, { signal: AbortSignal.timeout(8000) }); }
+    catch (e) { throw new Error('Backlog could not be reached'); }
+    if (r.status === 401 || r.status === 403) throw new Error('Backlog API key was rejected');
+    return r;
+  };
+  const r = await call(`issues/${encodeURIComponent(key)}`);
   if (r.status === 404) return { key, url: url.replace('{key}', key), notFound: true };
   if (!r.ok) throw new Error('Backlog error ' + r.status);
-  const j = await r.json(), name = x => (x && x.name) || '';
+  const j = await r.json(), name = x => (x && x.name) || '', names = a => (a || []).map(name).filter(Boolean).join(', ');
+  const day = s => (s || '').slice(0, 10), time = s => (s || '').replace('T', ' ').slice(0, 16);
+  // latest comments (Backlog returns newest first; shown oldest first like Backlog)
+  let comments = [];
+  try {
+    const c = await call(`issues/${encodeURIComponent(key)}/comments?order=desc&count=20`);
+    if (c.ok) comments = (await c.json()).filter(x => (x.content || '').trim()).map(x => ({ by: name(x.createdUser), at: time(x.created), text: x.content.replace(/\r/g, '') })).reverse();
+  } catch (e) { /* the issue itself is enough */ }
   const data = {
-    key, url: url.replace('{key}', key), summary: j.summary, status: name(j.status), type: name(j.issueType), typeColor: j.issueType && j.issueType.color,
-    priority: name(j.priority), assignee: name(j.assignee), createdBy: name(j.createdUser), due: (j.dueDate || '').slice(0, 10), updated: (j.updated || '').slice(0, 10),
-    description: (j.description || '').replace(/\r/g, '').slice(0, 400),
+    key, url: url.replace('{key}', key), summary: j.summary,
+    status: name(j.status), statusColor: j.status && j.status.color, type: name(j.issueType), typeColor: j.issueType && j.issueType.color,
+    priority: name(j.priority), assignee: name(j.assignee), milestone: names(j.milestone), category: names(j.category), versions: names(j.versions),
+    start: day(j.startDate), due: day(j.dueDate), estimated: j.estimatedHours, actual: j.actualHours,
+    createdBy: name(j.createdUser), created: time(j.created), updatedBy: name(j.updatedUser), updated: time(j.updated),
+    description: (j.description || '').replace(/\r/g, ''), attachments: (j.attachments || []).length, comments,
   };
   issueCache.set(key, { at: Date.now(), data });
   return data;

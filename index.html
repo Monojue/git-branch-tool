@@ -89,13 +89,24 @@ th.sortable .sarrow{margin-left:4px;font-size:10px;opacity:.45}
 th.sortable.on{color:var(--ink)}th.sortable.on .sarrow{opacity:1;color:var(--accent)}
 a.br-link{color:inherit;text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
 a.br-link:hover{color:var(--accent);text-decoration-color:var(--accent)}
-#issueTip{position:fixed;z-index:40;width:min(420px,92vw);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.18);font-size:13px;pointer-events:none}
-#issueTip .it-h{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px}
-#issueTip .it-s{font-weight:650;margin:2px 0 6px}
-#issueTip .it-m{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px}
-#issueTip .it-m b{color:var(--ink);font-weight:500}
-#issueTip .it-d{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);white-space:pre-wrap;color:var(--muted);font-size:12px;max-height:9em;overflow:hidden}
-#issueTip .it-f{margin-top:8px;font-size:11.5px;color:var(--faint)}
+.br{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-ic{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--muted);cursor:pointer;padding:0}
+.btn-ic:hover{color:var(--accent);border-color:var(--accent)}
+a.btn{text-decoration:none}
+dialog.wide{width:min(880px,96vw)}
+dialog.wide .db{max-height:72vh}
+.iss-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.iss-head a{color:var(--accent)}
+.iss-chip{display:inline-block;color:#fff;border-radius:999px;padding:1px 10px;font-size:12px;font-weight:600}
+.iss-title{font-size:18px;font-weight:650;margin-top:6px;line-height:1.4}
+.iss-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 14px}
+.iss-grid>div{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:7px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.iss-grid>div>span{color:var(--muted)}.iss-grid>div>b{font-weight:500;min-width:0;word-break:break-word}
+.iss-sec{font-weight:650;margin:14px 0 6px;font-size:13.5px}
+.iss-desc{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7}
+.iss-cmt{border-left:3px solid var(--line);padding:6px 0 6px 12px;margin:8px 0}
+.iss-cmt-h{display:flex;gap:10px;align-items:baseline;font-size:13px}
+.iss-cmt-b{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.6;margin-top:2px}
 .netsvg path.hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
 .netsvg.line-active>g:not(.linesel):not(.selmark):not(.axis):not(.hits){opacity:.25;transition:opacity .15s}
 .netsvg .linesel{pointer-events:none}
@@ -266,7 +277,7 @@ pre.log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padd
   <main id="main"></main>
 </div>
 <dialog id="dlg"><div class="dh" id="dlgTitle"></div><div class="db" id="dlgBody"></div><div class="df" id="dlgFoot"></div></dialog>
-<div id="toast"></div><div id="tip"></div><div id="issueTip" hidden></div>
+<div id="toast"></div><div id="tip"></div>
 
 <script>
 // ============================================================ i18n
@@ -446,11 +457,14 @@ const I18N = {
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
     'sort.hint': 'Click to sort; click again to reverse',
-    'iss.noKey': 'Preview: set your Backlog API key in the repository settings (click the repository name at the top left).',
+    'iss.noKey': 'To see the issue here, set your Backlog API key in the repository settings (Backlog → Personal settings → API).',
     'iss.notFound': 'This issue was not found in Backlog.', 'iss.assignee': 'Assignee', 'iss.priority': 'Priority', 'iss.due': 'Due', 'iss.updated': 'Updated',
-    'iss.open': 'Click to open in Backlog (new tab)',
+    'iss.preview': 'Preview the issue', 'iss.openBtn': 'Open in Backlog', 'iss.toSettings': 'Open repository settings',
+    'iss.milestone': 'Milestone', 'iss.category': 'Category', 'iss.versions': 'Version', 'iss.start': 'Start date',
+    'iss.estimated': 'Estimated', 'iss.actual': 'Actual', 'iss.createdBy': 'Created', 'iss.description': 'Description',
+    'iss.attachments': p => pl(p.n, 'attachment', 'attachments'), 'iss.comments': p => `Comments (${p.n === 20 ? 'latest 20' : p.n})`,
     'repo.issueUrl': 'Issue link', 'repo.issueUrlHint': 'Opened when you click a branch name; {key} is replaced by the issue key in the branch name (feature/PROJ-978 → PROJ-978). Empty = no links.',
-    'repo.apiKey': 'Backlog API key (for issue previews)', 'repo.apiKeySaved': 'saved (leave empty to keep it)',
+    'repo.apiKey': 'Backlog API key (for the issue preview)', 'repo.apiKeySaved': 'saved (leave empty to keep it)',
     'repo.apiKeyHint': 'Backlog → Personal settings → API. Stored only in config.json on this PC and used only by the local server.',
     'repo.apiKeyRemove': 'Remove the saved API key',
     'n.mAuto': 'This branch', 'n.mAutoD': 'The branch itself is always shown completely.',
@@ -635,9 +649,12 @@ const I18N = {
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
     'sort.hint': 'クリックで並べ替え、もう一度クリックで逆順',
-    'iss.noKey': 'プレビュー: リポジトリの設定（左上のリポジトリ名をクリック）で Backlog の API キーを設定してください。',
+    'iss.noKey': '課題をここに表示するには、リポジトリの設定で Backlog の API キーを設定してください（Backlog → 個人設定 → API）。',
     'iss.notFound': 'この課題は Backlog に見つかりませんでした。', 'iss.assignee': '担当者', 'iss.priority': '優先度', 'iss.due': '期限', 'iss.updated': '更新',
-    'iss.open': 'クリックで Backlog を開きます（新しいタブ）',
+    'iss.preview': '課題をプレビュー', 'iss.openBtn': 'Backlogで開く', 'iss.toSettings': 'リポジトリの設定を開く',
+    'iss.milestone': 'マイルストーン', 'iss.category': 'カテゴリー', 'iss.versions': '発生バージョン', 'iss.start': '開始日',
+    'iss.estimated': '予定時間', 'iss.actual': '実績時間', 'iss.createdBy': '登録', 'iss.description': '詳細',
+    'iss.attachments': '添付ファイル {n} 件', 'iss.comments': p => `コメント（${p.n === 20 ? '最新 20 件' : p.n + ' 件'}）`,
     'repo.issueUrl': '課題リンク', 'repo.issueUrlHint': 'ブランチ名をクリックしたときに開く URL です。{key} はブランチ名の課題キーに置き換わります（feature/PROJ-978 → PROJ-978）。空欄の場合はリンクなし。',
     'repo.apiKey': 'Backlog API キー（課題プレビュー用）', 'repo.apiKeySaved': '保存済み（空欄のままなら変更しません）',
     'repo.apiKeyHint': 'Backlog → 個人設定 → API で発行します。このPCの config.json にだけ保存され、ローカルのサーバーだけが使用します。',
@@ -878,46 +895,54 @@ function bindSort(root, defs, rerender) {
 }
 
 // ============================================================ issue links and previews
-// The issue key comes from the branch name (feature/PROJ-978 -> PROJ-978); the link template is a repository setting
+// The issue key comes from the branch name (feature/PROJ-978 -> PROJ-978); the link template is a repository setting.
+// Branch name = link to the issue (new tab); the small button next to it opens a preview dialog.
 const issueKeyOf = name => (String(name).match(/[A-Z][A-Z0-9_]*-\d+/) || [])[0] || null;
+const ICON_PREVIEW = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M3 1.5h6.6L13 4.9V14a.5.5 0 0 1-.5.5h-9A.5.5 0 0 1 3 14V1.5Zm1 1V13.5h8V5.3H9.2V2.5H4Zm1.5 5h5v1h-5v-1Zm0 2.2h5v1h-5v-1Zm0 2.2h3.2v1H5.5v-1Z"/></svg>';
 function brLink(name) {
   const key = issueKeyOf(name), url = S.ov && S.ov.issueUrl;
   if (!key || !url) return `<span class="mono">${esc(name)}</span>`;
-  return `<a class="mono br-link" href="${esc(url.replace('{key}', encodeURIComponent(key)))}" target="_blank" rel="noopener" data-issue="${esc(key)}">${esc(name)}</a>`;
+  return `<span class="br"><a class="mono br-link" href="${esc(url.replace('{key}', encodeURIComponent(key)))}" target="_blank" rel="noopener">${esc(name)}</a>` +
+    `<button class="btn-ic" data-issue="${esc(key)}" title="${esc(t('iss.preview'))}" aria-label="${esc(t('iss.preview'))}">${ICON_PREVIEW}</button></span>`;
 }
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('button[data-issue]');
+  if (!b) return;
+  ev.preventDefault(); ev.stopPropagation();
+  openIssue(b.dataset.issue);
+}, true);
 const ISSUES = new Map();
-let issueHover = null, issueTimer = null;
-document.addEventListener('mouseover', ev => {
-  const a = ev.target.closest && ev.target.closest('[data-issue]');
-  if (!a || a === issueHover) return;
-  issueHover = a; clearTimeout(issueTimer); issueTimer = setTimeout(() => showIssue(a), 350);
-});
-document.addEventListener('mouseout', ev => {
-  const a = ev.target.closest && ev.target.closest('[data-issue]');
-  if (!a || (ev.relatedTarget && a.contains(ev.relatedTarget))) return;
-  issueHover = null; clearTimeout(issueTimer); $('#issueTip').hidden = true;
-});
-function placeIssueTip(box, a) {
-  const r = a.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
-  box.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
-  box.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
-}
-async function showIssue(a) {
-  const key = a.dataset.issue, box = $('#issueTip');
-  box.innerHTML = `<div class="loading" style="padding:4px">${spin(t('loading'))}</div>`; box.hidden = false; placeIssueTip(box, a);
+// small text formatting for Backlog text: keep line breaks, make URLs clickable
+const issueText = s => esc(s).replace(/https?:\/\/[^\s<>"']+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+async function openIssue(key) {
+  const dlg = $('#dlg'), url = S.ov && S.ov.issueUrl ? S.ov.issueUrl.replace('{key}', encodeURIComponent(key)) : null;
+  dlg.classList.add('wide');
+  dlg.addEventListener('close', () => dlg.classList.remove('wide'), { once: true });
+  $('#dlgTitle').innerHTML = `<span class="mono">${esc(key)}</span>`;
+  $('#dlgBody').innerHTML = `<div class="loading">${spin(t('loading'))}</div>`;
+  $('#dlgFoot').innerHTML = `${url ? `<a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('iss.openBtn'))} ↗</a>` : ''}<button class="btn" id="dlgClose">${esc(t('cf.close'))}</button>`;
+  $('#dlgClose').onclick = () => dlg.close();
+  if (!dlg.open) dlg.showModal();
   let d = ISSUES.get(key);
-  if (!d) { try { d = await api('/api/issue?key=' + encodeURIComponent(key)); ISSUES.set(key, d); } catch (e) { d = { key, error: e.message }; } }
-  if (issueHover !== a) return;
-  const head = `<div class="it-h"><b class="mono">${esc(key)}</b>${d.type ? `<span class="badge" style="background:${esc(d.typeColor || 'var(--chip)')};color:#fff">${esc(d.type)}</span>` : ''}${d.status ? badge('b-info', d.status) : ''}</div>`;
-  let body;
-  if (d.error) body = `<div class="small" style="color:var(--bad)">${esc(d.error)}</div>`;
-  else if (d.noApiKey) body = `<div class="small muted">${esc(t('iss.noKey'))}</div>`;
-  else if (d.notFound) body = `<div class="small muted">${esc(t('iss.notFound'))}</div>`;
-  else body = `<div class="it-s">${esc(d.summary)}</div>
-    <div class="it-m">${[[t('iss.assignee'), d.assignee], [t('iss.priority'), d.priority], [t('iss.due'), d.due], [t('iss.updated'), d.updated]].filter(x => x[1]).map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
-    ${d.description ? `<div class="it-d">${esc(d.description)}</div>` : ''}`;
-  box.innerHTML = head + body + `<div class="it-f">${esc(t('iss.open'))}</div>`;
-  placeIssueTip(box, a);
+  if (!d) { try { d = await api('/api/issue?key=' + encodeURIComponent(key)); if (!d.noApiKey) ISSUES.set(key, d); } catch (e) { d = { key, error: e.message }; } }
+  if (!dlg.open) return;
+  if (d.error || d.noApiKey || d.notFound || d.noLink) {
+    const msg = d.error ? `<p style="color:var(--bad)">${esc(d.error)}</p>` : d.notFound ? `<p>${esc(t('iss.notFound'))}</p>` : `<p>${esc(t('iss.noKey'))}</p>`;
+    $('#dlgBody').innerHTML = msg + (d.noApiKey || d.error ? `<p><button class="btn" id="issSettings">${esc(t('iss.toSettings'))}</button></p>` : '');
+    const b = $('#issSettings'); if (b) b.onclick = () => { dlg.close(); openRepoDialog(); };
+    return;
+  }
+  const chip = (txt, color) => txt ? `<span class="iss-chip" style="background:${esc(color || 'var(--muted)')}">${esc(txt)}</span>` : '';
+  $('#dlgTitle').innerHTML = `<div class="iss-head">${chip(d.type, d.typeColor)}<a class="mono" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.key)}</a>${chip(d.status, d.statusColor || '#6b7280')}</div><div class="iss-title">${esc(d.summary)}</div>`;
+  const rows = [['iss.priority', d.priority], ['iss.assignee', d.assignee], ['iss.milestone', d.milestone], ['iss.category', d.category], ['iss.versions', d.versions],
+    ['iss.start', d.start], ['iss.due', d.due], ['iss.estimated', d.estimated != null ? d.estimated + ' h' : ''], ['iss.actual', d.actual != null ? d.actual + ' h' : ''],
+    ['iss.createdBy', d.createdBy ? `${d.createdBy} · ${d.created}` : ''], ['iss.updated', d.updated ? `${d.updatedBy ? d.updatedBy + ' · ' : ''}${d.updated}` : '']];
+  $('#dlgBody').innerHTML = `
+    <div class="iss-grid">${rows.map(([k, v]) => `<div><span>${esc(t(k))}</span><b>${v ? esc(v) : '<span class="muted">—</span>'}</b></div>`).join('')}</div>
+    <div class="iss-sec">${esc(t('iss.description'))}${d.attachments ? ` <span class="muted small">· ${esc(t('iss.attachments', { n: d.attachments }))}</span>` : ''}</div>
+    <div class="iss-desc">${d.description ? issueText(d.description) : `<span class="muted">—</span>`}</div>
+    <div class="iss-sec">${esc(t('iss.comments', { n: d.comments.length }))}</div>
+    ${d.comments.length ? d.comments.map(c => `<div class="iss-cmt"><div class="iss-cmt-h"><b>${esc(c.by)}</b><span class="muted small">${esc(c.at)}</span></div><div class="iss-cmt-b">${issueText(c.text)}</div></div>`).join('') : `<div class="muted small">—</div>`}`;
 }
 
 // ============================================================ features
