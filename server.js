@@ -577,9 +577,15 @@ const server = http.createServer(async (req, res) => {
     req.on('close', () => { clearInterval(beat); alivePages--; if (AUTO_STOP && alivePages === 0) scheduleStop(15000); });
     return;
   }
-  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
-    return res.end(fs.readFileSync(path.join(__dirname, 'index.html')));
+  // the page and its files; only these names are served (nothing else from the disk)
+  const STATIC = /^\/(index\.html|app\.css|icon\.(?:png|svg|ico)|js\/[a-z0-9-]+\.js)$/;
+  const TYPES = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', js: 'text/javascript; charset=utf-8', png: 'image/png', svg: 'image/svg+xml', ico: 'image/x-icon' };
+  const file = url.pathname === '/' ? '/index.html' : url.pathname;
+  if (req.method === 'GET' && STATIC.test(file)) {
+    const f = path.join(__dirname, file.slice(1));
+    if (!fs.existsSync(f)) { res.writeHead(404); return res.end('not found'); }
+    res.writeHead(200, { 'content-type': TYPES[file.split('.').pop()], 'cache-control': 'no-store' });
+    return res.end(fs.readFileSync(f));
   }
   const fn = ROUTES[`${req.method} ${url.pathname}`];
   if (!fn) { res.writeHead(404); return res.end('not found'); }
