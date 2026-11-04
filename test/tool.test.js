@@ -21,7 +21,7 @@ describe('analysis of a repository with a known situation', () => {
   after(async () => { if (srv) await srv.stop(); if (repo) repo.cleanup(); });
 
   it('lists only unreleased branches as features', () => {
-    assert.deepEqual(ov.features.map(f => f.short).sort(), ['feature/PRJ-2', 'feature/PRJ-3', 'feature/PRJ-4']);
+    assert.deepEqual(ov.features.map(f => f.short).sort(), ['feature/PRJ-2', 'feature/PRJ-3', 'feature/PRJ-4', 'feature/PRJ-5', 'feature/PRJ-6']);
   });
 
   it('marks branches already in master as merged', () => {
@@ -78,6 +78,17 @@ describe('analysis of a repository with a known situation', () => {
     assert.deepEqual(r.steps[1].files, ['src/app.txt']);
     repo.git('fetch', '-q');
     assert.equal(repo.git('rev-parse', 'origin/staging').trim(), before);
+  });
+
+  it('merge plan: contained branch first, clean ones first, conflicts last and explained, nothing pushed', async () => {
+    const before = repo.git('rev-parse', 'origin/master').trim();
+    const p = await srv.call('/api/merge-plan', { base: 'master', branches: ['feature/PRJ-6', 'feature/PRJ-4', 'feature/PRJ-3', 'feature/PRJ-5', 'feature/PRJ-2'] });
+    assert.deepEqual(p.steps.map(s => [s.branch, s.ok]), [['feature/PRJ-2', true], ['feature/PRJ-4', true], ['feature/PRJ-5', true], ['feature/PRJ-6', false], ['feature/PRJ-3', false]]);
+    const s6 = p.steps[3], s3 = p.steps[4];
+    assert.deepEqual(s6.files, ['src/b.txt']); assert.deepEqual(s6.withBranches, ['feature/PRJ-5']); assert.deepEqual(s6.withBase, []);
+    assert.deepEqual(s3.withBase, ['src/app.txt']);
+    repo.git('fetch', '-q');
+    assert.equal(repo.git('rev-parse', 'origin/master').trim(), before);
   });
 
   it('commit details of a merge list what it brought in', async () => {
