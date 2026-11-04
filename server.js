@@ -17,34 +17,15 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const { CONF, saveConf, defaultCheckPaths } = require('./lib/config');
+const { git, out, lines, isAncestor, pool, conflictFiles, setRepoDir } = require('./lib/git');
+const { parseDiff, problemHunks } = require('./lib/diff');
 
-const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return {}; } };
-// Lost-code check looks at the source folder by default; the whole repository if there is no src/
-const defaultCheckPaths = root => fs.existsSync(path.join(root, 'src')) ? ['src'] : ['.'];
-const CONFIG_FILE = path.join(__dirname, 'config.json');
-const CONF = (() => {
-  const raw = readJson(CONFIG_FILE);
-  // keep every saved field (API keys, flags, …); only fill in defaults
-  const conf = { ...raw, port: raw.port || 4777, current: raw.current || null, recent: raw.recent || [], repos: raw.repos || {}, backlogKeys: raw.backlogKeys || {} };
-  if (raw.repo && !raw.repos) {            // migrate the old single-repository format
-    const p = path.resolve(__dirname, raw.repo);
-    conf.repos[p] = { remote: raw.remote || 'origin', main: raw.main || 'master', envs: raw.envs || ['dev', 'staging'], checkPaths: raw.checkPaths || defaultCheckPaths(p) };
-    conf.current = p; conf.recent = [p];
-    ['repo', 'remote', 'main', 'envs', 'checkPaths'].forEach(k => delete conf[k]);
-  }
-  return conf;
-})();
-const saveConf = () => fs.writeFileSync(CONFIG_FILE, JSON.stringify(CONF, null, 2));
-// One-time upgrade: repositories saved with the old default "." now default to src/
-if (!CONF.srcDefault) {
-  for (const [p, s] of Object.entries(CONF.repos)) if (s.checkPaths && s.checkPaths.join() === '.') s.checkPaths = defaultCheckPaths(p);
-  CONF.srcDefault = true; saveConf();
-}
 
 // Current repository; null until one is chosen
 let CFG = null, MAIN = null, ENVS = [];
 function useRepo(p) {
-  CFG = { repo: p, ...CONF.repos[p] };
+  CFG = { repo: p, ...CONF.repos[p] }; setRepoDir(p);
   MAIN = R(CFG.main); ENVS = CFG.envs.map(R); cache = null;
   defaultIssueUrlCache = null; if (typeof issueCache !== 'undefined') issueCache.clear();
 }
@@ -94,38 +75,6 @@ async function releaseInfo(rel, refs, features) {
 
   return { name: rel.short, ref: rel.name, date: rel.date, author: rel.author, subject: rel.subject,
     ahead, behind, conflicts, included: included.concat(deleted), envMerges, direct, candidates };
-}
-
-// ---------------------------------------------------------------- git helpers
-function git(args, { cwd = CFG && CFG.repo } = {}) {
-  return new Promise(resolve => {
-    execFile('git', args, { cwd, maxBuffer: 1 << 28, windowsHide: true, encoding: 'utf8' }, (err, stdout, stderr) => {
-      resolve({ code: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout, stderr });
-    });
-  });
-}
-async function out(args, opts) {
-  const r = await git(args, opts);
-  if (r.code !== 0) throw new Error(`git ${args.join(' ')}\n${r.stderr.trim()}`);
-  return r.stdout;
-}
-const lines = s => s.split(/\r?\n/).filter(Boolean);
-const isAncestor = async (a, b) => (await git(['merge-base', '--is-ancestor', a, b])).code === 0;
-async function pool(items, n, fn) {
-  const res = new Array(items.length); let i = 0;
-  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
-    while (i < items.length) { const k = i++; res[k] = await fn(items[k], k); }
-  }));
-  return res;
-}
-// merge-tree --write-tree --name-only: exit 1 = conflicts; stdout = tree, conflicted files, blank, messages
-async function conflictFiles(a, b) {
-  const r = await git(['merge-tree', '--write-tree', '--name-only', a, b]);
-  if (r.code === 0) return [];
-  if (r.code !== 1) return null;
-  const ls = r.stdout.split(/\r?\n/); const files = [];
-  for (let i = 1; i < ls.length && ls[i] !== ''; i++) files.push(ls[i]);
-  return files;
 }
 
 // ---------------------------------------------------------------- overview
@@ -243,41 +192,6 @@ async function graph() {
 const tagNameFor = releaseShort => releaseShort.replace(/^release\//, 'release-');
 
 // ---------------------------------------------------------------- lost-code check
-// Idea: an environment branch should be exactly main + the unreleased feature branches.
-// Every line that differs from main must therefore be a line that some unreleased feature
-// changes. A line that differs but that no feature changes is a problem:
-//   "-" line (in main, not in env)  -> released code is missing on the environment
-//   "+" line (in env, not in main)  -> unknown change: from no feature (old conflict fix, direct commit…)
-const normLine = l => l.slice(1).trim();
-const significant = t => t.length > 3;            // ignore blank lines and lone braces
-function parseDiff(text, keepLines) {
-  const files = new Map(); let cur = null;
-  for (const l of text.split(/\r?\n/)) {
-    if (l.startsWith('diff --git ')) {
-      const m = l.match(/ b\/(.*)$/); cur = { minus: new Set(), plus: new Set(), lines: keepLines ? [] : null };
-      files.set(m ? m[1] : l, cur); continue;
-    }
-    if (!cur || l.startsWith('---') || l.startsWith('+++') || l.startsWith('index ') || l.startsWith('new file') || l.startsWith('deleted file') || l.startsWith('similarity') || l.startsWith('rename ') || l.startsWith('Binary')) continue;
-    if (l[0] === '-' || l[0] === '+') { const t = normLine(l); if (significant(t)) cur[l[0] === '-' ? 'minus' : 'plus'].add(t); }
-    if (keepLines && (l[0] === '-' || l[0] === '+' || l[0] === ' ' || l.startsWith('@@'))) cur.lines.push(l);
-  }
-  return files;
-}
-// Cut a file's diff into hunks and keep only the hunks that contain a problem line
-function problemHunks(lines, missing, extra) {
-  const hunks = []; let h = null;
-  for (const l of lines) {
-    if (l.startsWith('@@')) { h = { header: l.replace(/^(@@[^@]*@@).*/, '$1'), lines: [], bad: 0 }; hunks.push(h); continue; }
-    if (!h) continue;
-    const t = l[0], s = l.slice(1), n = s.trim();
-    const bad = (t === '-' && missing.has(n)) || (t === '+' && extra.has(n));
-    if (bad) h.bad++;
-    h.lines.push({ t, s, bad });
-  }
-  const keep = hunks.filter(x => x.bad);
-  let budget = 260;                                  // keep the page readable for huge files
-  return keep.filter(x => (budget -= x.lines.length) > 0 || x === keep[0]).map(({ header, lines }) => ({ header, lines }));
-}
 async function envCheck(env) {
   const ref = R(env); if (!ENVS.includes(ref)) throw new Error('unknown environment ' + env);
   const ov = await overview();
