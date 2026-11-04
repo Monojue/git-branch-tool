@@ -45,6 +45,18 @@ function makeRepo() {
   branch('feature/PRJ-3', 'master'); write('src/app.txt', app('line one changed by PRJ-3')); commit('PRJ-3 change line one');
   checkout('master'); write('src/app.txt', app('line one changed on master')); commit('master: change line one');
 
+  // PRJ-7 / PRJ-8: the order matters. PRJ-7 starts from an older master and makes the same change master
+  // made later; PRJ-8 builds on the newer master. PRJ-7 then PRJ-8 merges cleanly, PRJ-8 then PRJ-7
+  // conflicts in src/c.txt (git compares PRJ-7 with its older starting point).
+  write('src/c.txt', 'c is a\n'); commit('master: add c');
+  branch('feature/PRJ-7', 'master'); write('src/c.txt', 'c is b\n'); write('src/p7.txt', 'feature seven\n'); commit('PRJ-7 change c, add p7');
+  checkout('master'); write('src/c.txt', 'c is b\n'); commit('master: c is b');
+  branch('feature/PRJ-8', 'master'); write('src/c.txt', 'c is c\n'); commit('PRJ-8 change c');
+  // PRJ-5 / PRJ-6 change the same line: they conflict in any order
+  branch('feature/PRJ-5', 'master'); write('src/b.txt', 'b changed by PRJ-5\n'); commit('PRJ-5 change b');
+  branch('feature/PRJ-6', 'master'); write('src/b.txt', 'b changed by PRJ-6\n'); commit('PRJ-6 change b');
+  checkout('master');
+
   branch('feature/PRJ-2', 'master'); write('src/p2.txt', 'feature two first version\n'); commit('PRJ-2 add p2');
   branch('feature/PRJ-4', 'master'); merge('feature/PRJ-2', "Merge branch 'feature/PRJ-2' into feature/PRJ-4");
   write('src/p4.txt', 'feature four content\n'); commit('PRJ-4 add p4');

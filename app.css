@@ -253,3 +253,8 @@ pre.log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padd
 .relchk li.bad>div>span{font-weight:600}.relchk li.bad .small{color:var(--muted);margin-top:2px}
 .relchk li>div{flex:1;min-width:0}
 .relchk li.todo label span{font-weight:600}
+.mo-form{align-items:flex-end;flex-wrap:wrap}
+.mo-form input[type=text]{width:100%}
+.mo-pairs{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:8px}
+.mo-pairs>li{border:1px solid var(--line);border-radius:8px;padding:8px 10px;display:grid;gap:4px}
+.mo-form .field{margin:0}

@@ -52,9 +52,10 @@ function releaseChecks(r, sec) {
 }
 function vReleases() {
   const ov = S.ov, rs = ov.releases || [];
-  $('#main').innerHTML = topbar(t('rel.title')) + (rs.length
-    ? `<div class="grid">${rs.map(releaseSection).join('')}</div>`
-    : `<div class="section"><div class="empty">${esc(t('rel.none', { main: ov.main }))}</div></div>`);
+  $('#main').innerHTML = topbar(t('rel.title')) + `<div class="grid">${mergeOrderSection()}${rs.length
+    ? rs.map(releaseSection).join('')
+    : `<div class="section"><div class="empty">${esc(t('rel.none', { main: ov.main }))}</div></div>`}</div>`;
+  bindMergeOrder();
   $('#main').querySelectorAll('[data-relrow]').forEach(tr => tr.addEventListener('click', ev => {
     if (ev.target.closest('a')) return;
     const k = tr.dataset.relrow; S.openRows.has(k) ? S.openRows.delete(k) : S.openRows.add(k); vReleases();
@@ -108,4 +109,95 @@ function releaseSection(r) {
         ${r.candidates.length ? `<div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th>${envs.map(e => `<th>${esc(e)}</th>`).join('')}<th>${esc(t('f.th.conflict', { main }))}</th></tr></thead><tbody>${r.candidates.map(c => `<tr><td>${brLink(c.short)}</td><td>${esc(c.authors.join(', '))}</td>${envs.map(e => `<td>${envCell(c.env[e])}</td>`).join('')}<td>${c.conflicts == null ? '?' : c.conflicts.length ? badge('b-bad', t('f.files', { n: c.conflicts.length })) : badge('b-ok', t('none'))}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>
       <div id="${sec('notes')}"><b>${esc(t('rel.notesT'))}</b><div class="small muted">${esc(t('rel.notesD'))}</div>${copyBtn(notes)}</div>
     </div></div>`;
+}
+// ---- merge order suggestion: features entered like pull requests -> the order with the fewest conflicts
+const MO = (() => { try { return JSON.parse(localStorage.getItem('gbt-mergeorder') || '{}'); } catch (e) { return {}; } })();
+const saveMO = () => { try { localStorage.setItem('gbt-mergeorder', JSON.stringify({ base: MO.base, text: MO.text })); } catch (e) {} };
+const shortName = b => b.replace(/^(feature|hotfix|bugfix)\//, '');
+// "1098 1103, feature/PROJ-1131" -> branch names; a number matches the branch that ends with it
+function moResolve(text) {
+  const names = S.ov.features.map(f => f.short), found = [], unknown = [], ambiguous = [];
+  for (const tok of text.split(/[\s,、]+/).filter(Boolean)) {
+    let m = names.filter(n => n === tok);
+    if (!m.length) m = names.filter(n => shortName(n) === tok || n.endsWith('-' + tok) || n.endsWith('/' + tok));
+    if (!m.length) m = names.filter(n => n.toLowerCase().includes(tok.toLowerCase()));
+    if (m.length === 1) { if (!found.includes(m[0])) found.push(m[0]); }
+    else (m.length ? ambiguous : unknown).push(tok);
+  }
+  return { found, unknown, ambiguous };
+}
+function mergeOrderSection() {
+  const ov = S.ov, rels = ov.releases || [];
+  if (!MO.base || (MO.base !== ov.main && !rels.some(r => r.name === MO.base))) MO.base = ov.main;
+  const picked = moResolve(MO.text || '').found;
+  const pickList = ov.features.map(f => `<label class="chk" style="padding:3px 0"><input type="checkbox" data-mopick value="${esc(f.short)}" ${picked.includes(f.short) ? 'checked' : ''}><span class="mono">${esc(f.short)}</span></label>`).join('');
+  return `<div class="section" id="mergeOrder">
+    <header><h2>${esc(t('mo.title'))}</h2><div class="hint">${esc(t('mo.desc'))}</div></header>
+    <div class="body grid" style="gap:12px">
+      <div class="row mo-form">
+        <label class="field"><span>${esc(t('mo.target'))}</span><select id="moBase">
+          <option value="${esc(ov.main)}" ${MO.base === ov.main ? 'selected' : ''}>${esc(t('mo.newRelease', { main: ov.main }))}</option>
+          ${rels.map(r => `<option value="${esc(r.name)}" ${MO.base === r.name ? 'selected' : ''}>${esc(r.name)}${r.local ? ' — ' + esc(t('rel.local')) : ''}</option>`).join('')}
+        </select></label>
+        <label class="field" style="flex:1 1 320px"><span>${esc(t('mo.input'))}</span><input type="text" id="moText" value="${esc(MO.text || '')}" placeholder="${esc(t('mo.placeholder'))}"></label>
+        <button class="btn primary" id="moRun">${esc(t('mo.run'))}</button>
+      </div>
+      <details class="mo-pick" ${MO.pickOpen ? 'open' : ''}><summary class="small">${esc(t('mo.pick', { n: picked.length }))}</summary><div style="columns:2 260px;margin-top:6px">${pickList}</div></details>
+      ${MO.result ? mergeOrderResult(MO.result) : ''}
+    </div></div>`;
+}
+function bindMergeOrder() {
+  const text = $('#moText'); if (!text) return;
+  $('#moBase').addEventListener('change', ev => { MO.base = ev.target.value; MO.result = null; saveMO(); vReleases(); });
+  text.addEventListener('input', () => { MO.text = text.value; saveMO(); });
+  text.addEventListener('keydown', ev => { if (ev.key === 'Enter') $('#moRun').click(); });
+  $('.mo-pick').addEventListener('toggle', ev => { MO.pickOpen = ev.target.open; });
+  $('#main').querySelectorAll('[data-mopick]').forEach(cb => cb.addEventListener('change', () => {
+    const cur = moResolve(text.value).found;
+    const next = cb.checked ? [...cur, cb.value] : cur.filter(b => b !== cb.value);
+    MO.text = next.map(shortName).join(' '); saveMO();
+    const y = window.scrollY; vReleases(); window.scrollTo(0, y);
+  }));
+  $('#moRun').addEventListener('click', async ev => {
+    MO.text = text.value; saveMO();
+    const r = moResolve(MO.text);
+    if (r.unknown.length) return toast(t('mo.unknown', { list: r.unknown.join(', ') }));
+    if (r.ambiguous.length) return toast(t('mo.ambiguous', { list: r.ambiguous.join(', ') }));
+    if (!r.found.length) return toast(t('mo.empty'));
+    ev.currentTarget.disabled = true; ev.currentTarget.innerHTML = spin(t('mo.running'));
+    try { MO.result = await api('/api/merge-order', { base: MO.base, branches: r.found }); } catch (err) { toast(err.message); }
+    if (S.tab === 'releases') vReleases();
+  });
+}
+function mergeOrderResult(p) {
+  const ov = S.ov, base = p.base, isMain = base === ov.main;
+  const files = fs => `<ul class="files" style="margin:0">${fs.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`;
+  const pairs = p.pairs.filter(x => x.type === 'order'), both = p.pairs.filter(x => x.type === 'both');
+  const confBadge = n => badge(n ? 'b-bad' : 'b-ok', t('mo.conf', { n }));
+  const same = p.steps.map(s => s.branch).join() === p.enteredSteps.map(s => s.branch).join();
+  // why a branch sits where it is
+  const why = b => [
+    ...pairs.filter(x => x.then === b).map(x => t('mo.after', { b: shortName(x.first) })),
+    both.some(x => x.a === b || x.b === b) && t('mo.whyBoth'),
+    p.withBase.some(x => x.branch === b) && t('mo.whyBase', { base }),
+  ].filter(Boolean).join(' / ');
+  const rows = p.steps.map((s, i) => `<tr><td>${i + 1}</td><td class="mono">${brLink(s.branch)}</td><td>${s.ok ? badge('b-ok', t('mo.clean')) : badge('b-bad', t('mo.conflictStep'))}${s.files ? files(s.files) : ''}</td><td class="small muted">${esc(why(s.branch))}</td></tr>`).join('');
+  const start = isMain ? `git checkout -b release/YYYYMMDD ${ov.remote}/${base}` : `git checkout ${base}` + (p.local ? '' : '\ngit pull');
+  const cmds = [start, ...p.steps.map(s => `git merge --no-ff --no-edit ${ov.remote}/${s.branch}` + (s.ok ? '' : `\n# ${t('mo.cmdConflict', { files: s.files.join(', ') })}`)), `git push -u ${ov.remote} HEAD`].join('\n');
+  return `<div class="mo-result grid" style="gap:16px">
+    <div class="row">${esc(t('mo.yours'))} ${confBadge(p.enteredConflicts)} → ${esc(t('mo.suggested'))} ${confBadge(p.conflicts)}
+      ${same ? `<span class="small muted">${esc(t('mo.same'))}</span>` : ''}</div>
+    ${p.steps.length ? `<div><b>${esc(t('mo.orderT'))}</b><table style="margin-top:6px"><tbody>${rows}</tbody></table>
+      ${p.steps.some(s => !s.ok) ? `<div class="small muted" style="margin-top:4px">${esc(t('mo.afterConflict'))}</div>` : ''}</div>` : ''}
+    ${pairs.length ? `<div><b>${esc(t('mo.pairsT'))}</b><div class="small muted">${esc(t('mo.pairsD', { main: ov.main }))}</div>
+      <ul class="mo-pairs">${pairs.map(x => `<li><div>${badge('b-ok', `${shortName(x.first)} → ${shortName(x.then)}`)} ${esc(t('mo.noConflict'))}</div>
+        <div>${badge('b-bad', `${shortName(x.then)} → ${shortName(x.first)}`)} ${esc(t('mo.conflictIn'))}${files(x.files)}</div></li>`).join('')}</ul></div>` : ''}
+    ${both.length ? `<div><b>${esc(t('mo.bothT'))}</b><div class="small muted">${esc(t('mo.bothD'))}</div>
+      <ul class="mo-pairs">${both.map(x => `<li><div>${badge('b-warn', `${shortName(x.a)} + ${shortName(x.b)}`)}</div>${files(x.files)}</li>`).join('')}</ul></div>` : ''}
+    ${p.withBase.length ? `<div><b>${esc(t('mo.baseT', { base }))}</b><div class="small muted">${esc(t('mo.baseD', { base }))}</div>
+      <ul class="mo-pairs">${p.withBase.map(x => `<li><div class="mono">${brLink(x.branch)}</div>${files(x.files)}</li>`).join('')}</ul></div>` : ''}
+    ${!pairs.length && !both.length && !p.withBase.length && p.steps.length ? `<div>${badge('b-ok', t('mo.none'))}</div>` : ''}
+    ${p.already.length ? `<div class="small"><b>${esc(t('mo.alreadyT', { base }))}</b> <span class="mono">${esc(p.already.join(', '))}</span></div>` : ''}
+    ${p.steps.length ? `<div><b>${esc(t('mo.cmdT'))}</b>${copyBtn(cmds)}</div>` : ''}
+  </div>`;
 }

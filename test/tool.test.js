@@ -21,7 +21,7 @@ describe('analysis of a repository with a known situation', () => {
   after(async () => { if (srv) await srv.stop(); if (repo) repo.cleanup(); });
 
   it('lists only unreleased branches as features', () => {
-    assert.deepEqual(ov.features.map(f => f.short).sort(), ['feature/PRJ-2', 'feature/PRJ-3', 'feature/PRJ-4']);
+    assert.deepEqual(ov.features.map(f => f.short).sort(), ['feature/PRJ-2', 'feature/PRJ-3', 'feature/PRJ-4', 'feature/PRJ-5', 'feature/PRJ-6', 'feature/PRJ-7', 'feature/PRJ-8']);
   });
 
   it('marks branches already in master as merged', () => {
@@ -78,6 +78,24 @@ describe('analysis of a repository with a known situation', () => {
     assert.deepEqual(r.steps[1].files, ['src/app.txt']);
     repo.git('fetch', '-q');
     assert.equal(repo.git('rev-parse', 'origin/staging').trim(), before);
+  });
+
+  it('merge order: finds the order that avoids a conflict, and the pairs that conflict anyway', async () => {
+    const refsBefore = repo.git('for-each-ref', '--format=%(refname) %(objectname)');
+    // entered like pull requests, in an unlucky order
+    const p = await srv.call('/api/merge-order', { base: 'master', branches: ['feature/PRJ-8', 'feature/PRJ-7', 'feature/PRJ-5', 'feature/PRJ-6', 'feature/PRJ-3'] });
+    const ord = p.pairs.find(x => x.type === 'order');
+    assert.deepEqual([ord.first, ord.then, ord.files], ['feature/PRJ-7', 'feature/PRJ-8', ['src/c.txt']]);
+    const both = p.pairs.find(x => x.type === 'both');
+    assert.deepEqual([both.a, both.b].sort(), ['feature/PRJ-5', 'feature/PRJ-6']);
+    assert.deepEqual(p.withBase.map(x => x.branch), ['feature/PRJ-3']);
+    // suggested: PRJ-7 before PRJ-8 (clean), the unavoidable conflict and the conflict with master last
+    assert.deepEqual(p.steps.map(s => [s.branch, s.ok]), [['feature/PRJ-7', true], ['feature/PRJ-8', true], ['feature/PRJ-5', true], ['feature/PRJ-6', false], ['feature/PRJ-3', false]]);
+    assert.equal(p.conflicts, 2);
+    assert.equal(p.enteredSteps.find(s => s.branch === 'feature/PRJ-7').ok, false);   // PRJ-8 then PRJ-7 conflicts
+    assert.equal(p.enteredConflicts, 3);
+    // simulated in memory only: no branch or tag moved
+    assert.equal(repo.git('for-each-ref', '--format=%(refname) %(objectname)'), refsBefore);
   });
 
   it('commit details of a merge list what it brought in', async () => {

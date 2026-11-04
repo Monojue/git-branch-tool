@@ -242,6 +242,89 @@ async function featureConflicts() {
   return { pairs: res.filter(p => p.files && p.files.length) };
 }
 
+// ---------------------------------------------------------------- merge order (never pushes, no files touched)
+// Like merging pull requests one after another into a release: find an order with as few conflicts
+// as possible. Every pair is tried in both orders on the target (A then B, B then A), because with
+// different merge bases one order can merge cleanly while the other conflicts. Merges are simulated
+// in memory with `git merge-tree` + `git commit-tree` (temporary objects only; no branch moves).
+async function mergeOrder(base, branches) {
+  const ov = await overview();
+  const remote = new Map(ov.refs.map(r => [r.short, r.name]));
+  const rel = (ov.releases || []).find(r => r.name === base);
+  const baseRef = base === CFG.main ? MAIN : rel ? rel.ref : null;
+  if (!baseRef) throw new Error('unknown base ' + base);
+  branches = [...new Set(branches)];
+  branches.forEach(b => { if (!remote.has(b)) throw new Error('unknown branch ' + b); });
+  const ref = b => remote.get(b);
+  const baseCommit = (await out(['rev-parse', baseRef])).trim();
+
+  // merge X onto commit S in memory: { ok, commit } or { ok: false, files }
+  const memo = new Map();
+  const tryMerge = async (S, X) => {
+    const key = S + ' ' + X;
+    if (memo.has(key)) return memo.get(key);
+    const r = await git(['merge-tree', '--write-tree', '--name-only', S, ref(X)]);
+    let res;
+    if (r.code === 0) {
+      const tree = r.stdout.split(/\r?\n/)[0].trim();
+      const c = await out(['-c', 'user.name=Git Branch Tool', '-c', 'user.email=tool@localhost', 'commit-tree', tree, '-p', S, '-p', ref(X), '-m', 'merge order simulation']);
+      res = { ok: true, commit: c.trim() };
+    } else if (r.code === 1) {
+      const ls = r.stdout.split(/\r?\n/), files = [];
+      for (let i = 1; i < ls.length && ls[i] !== ''; i++) files.push(ls[i]);
+      res = { ok: false, files };
+    } else throw new Error('git merge-tree failed: ' + r.stderr.trim());
+    memo.set(key, res);
+    return res;
+  };
+  // a whole order: conflicting steps are reported (and left out of the following steps)
+  const simulate = async order => {
+    let S = baseCommit; const steps = [];
+    for (const X of order) {
+      const r = await tryMerge(S, X);
+      steps.push(r.ok ? { branch: X, ok: true } : { branch: X, ok: false, files: r.files });
+      if (r.ok) S = r.commit;
+    }
+    return steps;
+  };
+
+  const already = [], todo = [];
+  for (const b of branches) (await isAncestor(ref(b), baseRef) ? already : todo).push(b);
+  const single = {};
+  await pool(todo, 4, async b => { single[b] = await tryMerge(baseCommit, b); });
+  const withBase = todo.filter(b => !single[b].ok).map(b => ({ branch: b, files: single[b].files }));
+  const ok = todo.filter(b => single[b].ok);
+
+  // every pair in both orders
+  const pairs = [], before = new Map(ok.map(b => [b, new Set()]));   // before.get(B) = branches that must come before B
+  const pairList = [];
+  for (let i = 0; i < ok.length; i++) for (let j = i + 1; j < ok.length; j++) pairList.push([ok[i], ok[j]]);
+  await pool(pairList, 4, async ([a, b]) => {
+    const ab = await tryMerge(single[a].commit, b), ba = await tryMerge(single[b].commit, a);
+    if (ab.ok && ba.ok) return;
+    if (ab.ok) { pairs.push({ first: a, then: b, type: 'order', files: ba.files }); before.get(b).add(a); }
+    else if (ba.ok) { pairs.push({ first: b, then: a, type: 'order', files: ab.files }); before.get(a).add(b); }
+    else pairs.push({ a, b, type: 'both', files: [...new Set([...ab.files, ...ba.files])] });
+  });
+
+  // order: respect "must come before"; among the free ones keep the entered order, but put
+  // branches with unavoidable conflicts after the others (so each is resolved once, at the end)
+  const unavoidable = b => pairs.filter(p => p.type === 'both' && (p.a === b || p.b === b)).length;
+  const rank = b => unavoidable(b) * 1000 + branches.indexOf(b);
+  const order = [], placed = new Set();
+  while (order.length < ok.length) {
+    let free = ok.filter(b => !placed.has(b) && [...before.get(b)].every(x => placed.has(x)));
+    if (!free.length) free = ok.filter(b => !placed.has(b));          // a cycle: take the best remaining
+    free.sort((x, y) => rank(x) - rank(y));
+    order.push(free[0]); placed.add(free[0]);
+  }
+  const suggested = order.concat(withBase.map(x => x.branch));        // conflicts with the target: last
+  const entered = branches.filter(b => todo.includes(b));
+  const [steps, enteredSteps] = [await simulate(suggested), await simulate(entered)];
+  return { base, local: !!(rel && rel.local), already, withBase, pairs, steps, enteredSteps,
+    conflicts: steps.filter(s => !s.ok).length, enteredConflicts: enteredSteps.filter(s => !s.ok).length };
+}
+
 // ---------------------------------------------------------------- rebuild preview (never pushes)
 async function rebuildPreview(env, branches) {
   const ov = await overview();
@@ -473,6 +556,7 @@ const ROUTES = {
   'GET /api/env-check': q => envCheck(q.get('env')),
   'GET /api/feature-conflicts': () => featureConflicts(),
   'POST /api/rebuild-preview': (q, b) => rebuildPreview(b.env, b.branches || []),
+  'POST /api/merge-order': (q, b) => mergeOrder(b.base, b.branches || []),
   'POST /api/fetch': () => fetchAll(),
   'POST /api/delete-remote': (q, b) => deleteRemote(b.branches || []),
   'POST /api/tag-releases': (q, b) => tagReleases(b.branches || [], !!b.deleteBranch),
