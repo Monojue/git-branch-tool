@@ -95,7 +95,7 @@ function releaseSection(r) {
   })].join('\n');
   const sec = name => `rel-${r.name.replace(/[^A-Za-z0-9]/g, '-')}-${name}`, chk = releaseChecks(r, sec);
   return `<div class="section">
-    <header><h2>${esc(r.name)}</h2>${r.local ? badge('b-info', t('rel.local')) : ''}${chk.badge}${base}${conf}<span class="pill">${esc(t('rel.ahead', { n: r.ahead, main }))}</span>
+    <header><h2>${esc(r.name)}</h2>${chk.badge}${base}${conf}<span class="pill">${esc(t('rel.ahead', { n: r.ahead, main }))}</span>
       <div class="hint">${esc(t('e.last'))} ${esc(r.date)} ${esc(r.author)} — ${esc(r.subject)}</div></header>
     <div class="body grid" style="gap:18px">
       ${chk.html}
@@ -137,7 +137,7 @@ function mergeOrderSection() {
       <div class="row mo-form">
         <label class="field"><span>${esc(t('mo.target'))}</span><select id="moBase">
           <option value="${esc(ov.main)}" ${MO.base === ov.main ? 'selected' : ''}>${esc(t('mo.newRelease', { main: ov.main }))}</option>
-          ${rels.map(r => `<option value="${esc(r.name)}" ${MO.base === r.name ? 'selected' : ''}>${esc(r.name)}${r.local ? ' — ' + esc(t('rel.local')) : ''}</option>`).join('')}
+          ${rels.map(r => `<option value="${esc(r.name)}" ${MO.base === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}
         </select></label>
         <label class="field" style="flex:1 1 320px"><span>${esc(t('mo.input'))}</span><input type="text" id="moText" value="${esc(MO.text || '')}" placeholder="${esc(t('mo.placeholder'))}"></label>
         <button class="btn primary" id="moRun">${esc(t('mo.run'))}</button>
@@ -182,7 +182,7 @@ function mergeOrderResult(p) {
     p.withBase.some(x => x.branch === b) && t('mo.whyBase', { base }),
   ].filter(Boolean).join(' / ');
   const rows = p.steps.map((s, i) => `<tr><td>${i + 1}</td><td class="mono">${brLink(s.branch)}</td><td>${s.ok ? badge('b-ok', t('mo.clean')) : badge('b-bad', t('mo.conflictStep'))}${s.files ? files(s.files) : ''}</td><td class="small muted">${esc(why(s.branch))}</td></tr>`).join('');
-  const start = isMain ? `git checkout -b release/YYYYMMDD ${ov.remote}/${base}` : `git checkout ${base}` + (p.local ? '' : '\ngit pull');
+  const start = isMain ? `git checkout -b release/YYYYMMDD ${ov.remote}/${base}` : `git checkout ${base}\ngit pull`;
   const cmds = [start, ...p.steps.map(s => `git merge --no-ff --no-edit ${ov.remote}/${s.branch}` + (s.ok ? '' : `\n# ${t('mo.cmdConflict', { files: s.files.join(', ') })}`)), `git push -u ${ov.remote} HEAD`].join('\n');
   return `<div class="mo-result grid" style="gap:16px">
     <div class="row">${esc(t('mo.yours'))} ${confBadge(p.enteredConflicts)} → ${esc(t('mo.suggested'))} ${confBadge(p.conflicts)}
