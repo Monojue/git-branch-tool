@@ -48,13 +48,18 @@ async function releaseInfo(rel, refs, features) {
   const mentions = name => { const re = new RegExp(escRe(name) + '(?![\\w-])'); return mergeSubjects.some(s => re.test(s)); };
 
   const included = [];
+  const inRelease = new Set(lines(await out(['rev-list', `${MAIN}..${rel.name}`])));
   for (const f of features) {
-    if (await isAncestor(f.name, rel.name)) { included.push({ short: f.short, ticket: f.ticket, authors: f.authors, state: 'latest', missing: [], env: f.env, title: f.commits.length ? f.commits[f.commits.length - 1].s : '' }); continue; }
+    // the branch's own commits (its first-parent line), not those of other branches merged into it:
+    // a branch that only contains an included branch is not itself in the release
+    const own = lines(await out(['log', '--first-parent', '--no-merges', '--format=%H%x09%s', `${MAIN}..${f.name}`])).map(l => { const [h, s] = l.split('\t'); return { h, s }; });
+    const title = own.length ? own[own.length - 1].s : (f.commits.length ? f.commits[f.commits.length - 1].s : '');
+    if (await isAncestor(f.name, rel.name)) { included.push({ short: f.short, ticket: f.ticket, authors: f.authors, state: 'latest', missing: [], env: f.env, title }); continue; }
     const missing = lines(await out(['log', '--no-merges', COMMIT_FMT, f.name, `^${rel.name}`, `^${MAIN}`])).map(parseCommit);
     let state = null;
-    if (missing.length < f.commits.length) state = 'outdated';           // some of its commits are in the release, newer ones are not
+    if (own.some(c => inRelease.has(c.h))) state = 'outdated';          // some of its own commits are in the release, newer ones are not
     else if (mentions(f.short)) state = 'rewritten';                     // merged earlier, but the branch was rebased/rewritten since
-    if (state) included.push({ short: f.short, ticket: f.ticket, authors: f.authors, state, missing, env: f.env, title: f.commits.length ? f.commits[f.commits.length - 1].s : '' });
+    if (state) included.push({ short: f.short, ticket: f.ticket, authors: f.authors, state, missing, env: f.env, title });
   }
   // branches named in merge commits that no longer exist on the remote
   const existing = new Set(refs.map(r => r.short));

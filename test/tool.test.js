@@ -47,6 +47,9 @@ describe('analysis of a repository with a known situation', () => {
   it('reports the open release, with PRJ-2 outdated by one commit', () => {
     assert.deepEqual(ov.openReleases, ['release/20990101']);
     const rel = ov.releases[0], prj2 = rel.included.find(x => x.short === 'feature/PRJ-2');
+    // PRJ-4 contains PRJ-2 but was never merged into the release itself
+    assert.deepEqual(rel.included.map(x => x.short), ['feature/PRJ-2']);
+    assert.equal(prj2.title, 'PRJ-2 add p2');
     assert.equal(prj2.state, 'outdated');
     assert.equal(prj2.missing.length, 1);
     assert.deepEqual(rel.conflicts, []);
