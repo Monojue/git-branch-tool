@@ -142,7 +142,9 @@ function mergeOrderSection() {
         <label class="field" style="flex:1 1 320px"><span>${esc(t('mo.input'))}</span><input type="text" id="moText" value="${esc(MO.text || '')}" placeholder="${esc(t('mo.placeholder'))}"></label>
         <button class="btn primary" id="moRun">${esc(t('mo.run'))}</button>
       </div>
-      <details class="mo-pick" ${MO.pickOpen ? 'open' : ''}><summary class="small">${esc(t('mo.pick', { n: picked.length }))}</summary><div style="columns:2 260px;margin-top:6px">${pickList}</div></details>
+      <details class="mo-pick" ${MO.pickOpen ? 'open' : ''}><summary class="small">${esc(t('mo.pick', { n: picked.length }))}</summary>
+        <div class="row" style="margin-top:6px"><button class="btn sm" data-moall="1">${esc(t('mo.selectAll'))}</button><button class="btn sm" data-moall="0">${esc(t('mo.clearAll'))}</button></div>
+        <div style="columns:2 260px;margin-top:6px">${pickList}</div></details>
       ${MO.result ? mergeOrderResult(MO.result) : ''}
     </div></div>`;
 }
@@ -155,6 +157,13 @@ function bindMergeOrder() {
   $('#main').querySelectorAll('[data-mopick]').forEach(cb => cb.addEventListener('change', () => {
     const cur = moResolve(text.value).found;
     const next = cb.checked ? [...cur, cb.value] : cur.filter(b => b !== cb.value);
+    MO.text = next.map(shortName).join(' '); saveMO();
+    const y = window.scrollY; vReleases(); window.scrollTo(0, y);
+  }));
+  // select all keeps the entered order and adds the others at the end
+  $('#main').querySelectorAll('[data-moall]').forEach(btn => btn.addEventListener('click', () => {
+    const cur = moResolve(text.value).found;
+    const next = btn.dataset.moall === '1' ? [...cur, ...S.ov.features.map(f => f.short).filter(b => !cur.includes(b))] : [];
     MO.text = next.map(shortName).join(' '); saveMO();
     const y = window.scrollY; vReleases(); window.scrollTo(0, y);
   }));
