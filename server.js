@@ -242,57 +242,6 @@ async function featureConflicts() {
   return { pairs: res.filter(p => p.files && p.files.length) };
 }
 
-// ---------------------------------------------------------------- merge plan (never pushes)
-// Suggest an order to merge features into a base (main, or an open release) with as few conflict
-// resolutions as possible: contained branches before the branches that contain them, branches
-// without conflicts first, conflicting ones last; then a trial merge in a temporary folder confirms it.
-async function mergePlan(base, branches) {
-  const ov = await overview();
-  const remote = new Map(ov.refs.map(r => [r.short, r.name]));
-  const rel = (ov.releases || []).find(r => r.name === base);
-  const baseRef = base === CFG.main ? MAIN : rel ? rel.ref : null;
-  if (!baseRef) throw new Error('unknown base ' + base);
-  branches.forEach(b => { if (!remote.has(b)) throw new Error('unknown branch ' + b); });
-  const ref = b => remote.get(b);
-
-  const already = [], todo = [];
-  for (const b of branches) (await isAncestor(ref(b), baseRef) ? already : todo).push(b);
-  const withBase = {}, pairs = {};
-  await pool(todo, 4, async b => { withBase[b] = (await conflictFiles(baseRef, ref(b))) || []; });
-  const pairList = [];
-  for (let i = 0; i < todo.length; i++) for (let j = i + 1; j < todo.length; j++) pairList.push([todo[i], todo[j]]);
-  await pool(pairList, 4, async ([a, b]) => {
-    const f = await conflictFiles(ref(a), ref(b));
-    if (f && f.length) { (pairs[a] = pairs[a] || {})[b] = f; (pairs[b] = pairs[b] || {})[a] = f; }
-  });
-
-  // order: no conflicts first, then by how many other selected branches they conflict with
-  const score = b => (withBase[b].length ? 1000 : 0) + Object.keys(pairs[b] || {}).length;
-  const sorted = todo.slice().sort((a, b) => score(a) - score(b) || a.localeCompare(b, undefined, { numeric: true }));
-  const contains = Object.fromEntries(ov.features.map(f => [f.short, f.contains]));
-  const order = [], seen = new Set();
-  const visit = b => { if (seen.has(b)) return; seen.add(b); (contains[b] || []).filter(d => todo.includes(d)).forEach(visit); order.push(b); };
-  sorted.forEach(visit);
-
-  // trial merge in a temporary folder
-  const wt = path.join(os.tmpdir(), `gitbranchtool-plan-${Date.now()}`);
-  await out(['worktree', 'add', '--detach', wt, baseRef]);
-  const steps = [], merged = [];
-  try {
-    for (const b of order) {
-      const r = await git(['-c', 'rerere.enabled=false', 'merge', '--no-ff', '--no-edit', '-m', `Merge ${b} (plan)`, ref(b)], { cwd: wt });
-      if (r.code === 0) { merged.push(b); steps.push({ branch: b, ok: true }); continue; }
-      const files = lines((await git(['diff', '--name-only', '--diff-filter=U'], { cwd: wt })).stdout);
-      await git(['merge', '--abort'], { cwd: wt });
-      steps.push({ branch: b, ok: false, files, withBase: withBase[b], withBranches: Object.keys(pairs[b] || {}).filter(x => merged.includes(x)) });
-    }
-  } finally {
-    await git(['worktree', 'remove', '--force', wt]);
-    await git(['worktree', 'prune']);
-  }
-  return { base, baseRef, local: !!(rel && rel.local), already, steps, pairs };
-}
-
 // ---------------------------------------------------------------- rebuild preview (never pushes)
 async function rebuildPreview(env, branches) {
   const ov = await overview();
@@ -524,7 +473,6 @@ const ROUTES = {
   'GET /api/env-check': q => envCheck(q.get('env')),
   'GET /api/feature-conflicts': () => featureConflicts(),
   'POST /api/rebuild-preview': (q, b) => rebuildPreview(b.env, b.branches || []),
-  'POST /api/merge-plan': (q, b) => mergePlan(b.base, b.branches || []),
   'POST /api/fetch': () => fetchAll(),
   'POST /api/delete-remote': (q, b) => deleteRemote(b.branches || []),
   'POST /api/tag-releases': (q, b) => tagReleases(b.branches || [], !!b.deleteBranch),

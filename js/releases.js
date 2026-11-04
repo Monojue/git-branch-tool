@@ -50,79 +50,11 @@ function releaseChecks(r, sec) {
     <ul>${items.filter(x => x.manual).map(li).join('')}</ul></div>`;
   return { html, badge: badgeHtml, open };
 }
-// ---- release plan: which features are ready, and a merge order with as few conflict resolutions as possible
-const brShort = n => n.replace(/^(feature|hotfix|bugfix)\//, '');
-function planSection() {
-  const ov = S.ov, main = ov.main, envs = ov.envNames, stg = envs.includes('staging') ? 'staging' : envs[envs.length - 1];
-  const bases = [main, ...(ov.releases || []).map(r => r.name)];
-  const P = S.plan = S.plan || { base: bases[1] || main, picked: null, result: null };
-  if (!bases.includes(P.base)) { P.base = main; P.picked = null; P.result = null; }
-  const rel = (ov.releases || []).find(r => r.name === P.base);
-  const feats = ov.features.filter(f => !(rel && rel.included.some(x => x.short === f.short && x.state === 'latest')));
-  const ready = f => (!stg || f.env[stg] === 'full') && !(f.conflicts && f.conflicts.length);
-  if (!P.picked) P.picked = feats.filter(ready).map(f => f.short);
-  const status = f => {
-    const r = [];
-    if (stg && f.env[stg] === 'none') r.push(badge('b-mute', t('plan.notOnStg', { e: stg })));
-    else if (stg && f.env[stg] === 'old') r.push(badge('b-warn', t('plan.oldOnStg', { e: stg })));
-    if (f.conflicts && f.conflicts.length) r.push(badge('b-bad', t('plan.conflictMain', { main })));
-    if (f.contains.length) r.push(badge('b-info', t('plan.contains', { list: f.contains.map(brShort).join(', ') })));
-    return r.length ? r.join(' ') : badge('b-ok', t('plan.ready'));
-  };
-  const rows = feats.map(f => `<tr><td><input type="checkbox" data-plan="${esc(f.short)}" ${P.picked.includes(f.short) ? 'checked' : ''} aria-label="${esc(f.short)}"></td><td>${brLink(f.short)}</td><td>${esc(f.authors.join(', '))}</td><td>${status(f)}</td></tr>`).join('');
-  return `<div class="section" id="planSec"><header><h2>${esc(t('plan.title'))}</h2><div class="hint">${esc(t('plan.hint', { e: stg || 'staging', main }))}</div></header>
-    <div class="body grid" style="gap:12px">
-      <div class="row"><span class="small muted">${esc(t('plan.base'))}</span>
-        <select id="planBase" class="plan-sel">${bases.map(b => `<option value="${esc(b)}" ${b === P.base ? 'selected' : ''}>${esc(b === main ? t('plan.baseMain', { main }) : b + ((ov.releases.find(r => r.name === b) || {}).local ? ' ' + t('rel.local') : ''))}</option>`).join('')}</select>
-        <span style="flex:1"></span>
-        <button class="btn sm" id="planReady">${esc(t('plan.selReady'))}</button><button class="btn sm" id="planNone">${esc(t('plan.selNone'))}</button></div>
-      ${feats.length ? `<div class="tbl-wrap"><table><thead><tr><th></th><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th><th>${esc(t('plan.th.status'))}</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">${esc(t('plan.nothing'))}</div>`}
-      <div class="row"><button class="btn primary" id="planRun" ${P.picked.length ? '' : 'disabled'}>${esc(t('plan.btn', { n: P.picked.length }))}</button><span class="small muted">${esc(t('plan.btnD'))}</span></div>
-      ${P.result ? planResult(P.result) : ''}
-    </div></div>`;
-}
-function planResult(p) {
-  const ov = S.ov, main = ov.main, ok = p.steps.filter(s => s.ok), bad = p.steps.filter(s => !s.ok);
-  const step = (s, i) => {
-    const advice = [];
-    if (s.withBase && s.withBase.length) advice.push(t('plan.advBase', { base: p.base, list: s.withBase.join(', ') }));
-    // conflicts with the base explain the others too: rebasing onto the base is the one fix
-    if (!(s.withBase && s.withBase.length) && s.withBranches && s.withBranches.length) advice.push(t('plan.advPair', { list: s.withBranches.map(brShort).join(', ') }));
-    if (!s.ok && !advice.length) advice.push(t('plan.advOther'));
-    return `<li class="${s.ok ? 'ok' : 'bad'}"><span class="num">${i + 1}</span><div><div>${brLink(s.branch)} ${s.ok ? badge('b-ok', t('plan.stepOk')) : badge('b-bad', t('plan.stepBad', { list: s.files.join(', ') }))}</div>${advice.map(a => `<div class="small muted">${esc(a)}</div>`).join('')}</div></li>`;
-  };
-  const target = p.base === main ? 'release/YYYYMMDD' : p.base;
-  const head = p.base === main ? `git fetch\ngit checkout -b ${target} ${ov.remote}/${main}` : p.local ? `git checkout ${target}` : `git fetch\ngit checkout ${target}\ngit pull`;
-  const cmds = [head, ...p.steps.map(s => (s.ok ? '' : `# ${t('plan.cmdConflict')}\n`) + `git merge --no-ff ${ov.remote}/${s.branch}`),
-    p.local ? `# ${t('plan.cmdLocal')}` : `git push${p.base === main ? ` -u ${ov.remote} ${target}` : ''}`].join('\n');
-  return `<div class="plan-res">
-    <div><b>${esc(t('plan.resultT'))}</b> ${badge(bad.length ? 'b-warn' : 'b-ok', t('plan.summary', { ok: ok.length, bad: bad.length }))}</div>
-    <ol class="plan-steps">${p.steps.map(step).join('')}</ol>
-    ${p.already.length ? `<div class="small muted">${esc(t('plan.already', { list: p.already.map(brShort).join(', '), base: p.base }))}</div>` : ''}
-    ${bad.length ? `<div class="small" style="margin-top:6px">${esc(t('plan.note'))}</div>` : ''}
-    <div style="margin-top:8px"><b class="small">${esc(t('plan.cmds'))}</b>${copyBtn(cmds)}</div></div>`;
-}
-function bindPlan() {
-  const P = S.plan; if (!P || !$('#planSec')) return;
-  const rerender = () => { const y = window.scrollY; vReleases(); window.scrollTo(0, y); };
-  $('#planBase').onchange = e => { P.base = e.target.value; P.picked = null; P.result = null; rerender(); };
-  document.querySelectorAll('[data-plan]').forEach(cb => cb.onchange = () => {
-    P.picked = [...document.querySelectorAll('[data-plan]:checked')].map(x => x.dataset.plan); P.result = null; rerender();
-  });
-  $('#planReady').onclick = () => { P.picked = null; P.result = null; rerender(); };
-  $('#planNone').onclick = () => { P.picked = []; P.result = null; rerender(); };
-  $('#planRun').onclick = async ev => {
-    ev.currentTarget.disabled = true; ev.currentTarget.innerHTML = spin(t('plan.running'));
-    try { P.result = await api('/api/merge-plan', { base: P.base, branches: P.picked }); } catch (e) { toast(e.message); }
-    rerender();
-  };
-}
 function vReleases() {
   const ov = S.ov, rs = ov.releases || [];
-  $('#main').innerHTML = topbar(t('rel.title')) + `<div class="grid">${planSection()}` + (rs.length
-    ? `${rs.map(releaseSection).join('')}</div>`
-    : `<div class="section"><div class="empty">${esc(t('rel.none', { main: ov.main }))}</div></div></div>`);
-  bindPlan();
+  $('#main').innerHTML = topbar(t('rel.title')) + (rs.length
+    ? `<div class="grid">${rs.map(releaseSection).join('')}</div>`
+    : `<div class="section"><div class="empty">${esc(t('rel.none', { main: ov.main }))}</div></div>`);
   $('#main').querySelectorAll('[data-relrow]').forEach(tr => tr.addEventListener('click', ev => {
     if (ev.target.closest('a')) return;
     const k = tr.dataset.relrow; S.openRows.has(k) ? S.openRows.delete(k) : S.openRows.add(k); vReleases();

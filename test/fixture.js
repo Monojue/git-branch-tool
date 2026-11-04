@@ -7,7 +7,6 @@
 //   feature/PRJ-2     clean; merged into dev, staging and release/20990101,
 //                     then gets a newer commit       -> those three have an old version
 //   feature/PRJ-4     contains feature/PRJ-2 (merged into it) plus its own commit
-//   feature/PRJ-5/6   each clean against master, but they conflict with each other (src/b.txt)
 //   dev               master + PRJ-2 + a direct, unexplained change in src/app.txt
 //   staging           master + PRJ-2
 //   release/20990101  open release: master + PRJ-2 (old version)
@@ -49,10 +48,6 @@ function makeRepo() {
   branch('feature/PRJ-2', 'master'); write('src/p2.txt', 'feature two first version\n'); commit('PRJ-2 add p2');
   branch('feature/PRJ-4', 'master'); merge('feature/PRJ-2', "Merge branch 'feature/PRJ-2' into feature/PRJ-4");
   write('src/p4.txt', 'feature four content\n'); commit('PRJ-4 add p4');
-
-  // PRJ-5 and PRJ-6 change the same line: each merges cleanly into master, but not both
-  branch('feature/PRJ-5', 'master'); write('src/b.txt', 'b changed by PRJ-5\n'); commit('PRJ-5 change b');
-  branch('feature/PRJ-6', 'master'); write('src/b.txt', 'b changed by PRJ-6\n'); commit('PRJ-6 change b');
 
   branch('dev', 'master'); merge('feature/PRJ-2', "Merge branch 'feature/PRJ-2' into dev");
   write('src/app.txt', app('line one changed on master') + 'unexplained line added on dev\n'); commit('direct change on dev');
