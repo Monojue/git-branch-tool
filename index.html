@@ -83,6 +83,19 @@ details[open]>summary .chev{transform:rotate(90deg)}
 #netPanels .scroll circle.c{cursor:pointer}
 #netDetail:not(:empty){margin-top:16px}
 .selmark{pointer-events:none}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--ink)}
+th.sortable .sarrow{margin-left:4px;font-size:10px;opacity:.45}
+th.sortable.on{color:var(--ink)}th.sortable.on .sarrow{opacity:1;color:var(--accent)}
+a.br-link{color:inherit;text-decoration:underline;text-decoration-color:var(--faint);text-underline-offset:3px}
+a.br-link:hover{color:var(--accent);text-decoration-color:var(--accent)}
+#issueTip{position:fixed;z-index:40;width:min(420px,92vw);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.18);font-size:13px;pointer-events:none}
+#issueTip .it-h{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px}
+#issueTip .it-s{font-weight:650;margin:2px 0 6px}
+#issueTip .it-m{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:12px}
+#issueTip .it-m b{color:var(--ink);font-weight:500}
+#issueTip .it-d{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);white-space:pre-wrap;color:var(--muted);font-size:12px;max-height:9em;overflow:hidden}
+#issueTip .it-f{margin-top:8px;font-size:11.5px;color:var(--faint)}
 .netsvg path.hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
 .netsvg.line-active>g:not(.linesel):not(.selmark):not(.axis):not(.hits){opacity:.25;transition:opacity .15s}
 .netsvg .linesel{pointer-events:none}
@@ -253,7 +266,7 @@ pre.log{background:var(--bg);border:1px solid var(--line);border-radius:8px;padd
   <main id="main"></main>
 </div>
 <dialog id="dlg"><div class="dh" id="dlgTitle"></div><div class="db" id="dlgBody"></div><div class="df" id="dlgFoot"></div></dialog>
-<div id="toast"></div><div id="tip"></div>
+<div id="toast"></div><div id="tip"></div><div id="issueTip" hidden></div>
 
 <script>
 // ============================================================ i18n
@@ -432,6 +445,14 @@ const I18N = {
     'n.f.latest': 'latest', 'n.f.old': p => `old: ${pl(p.n, 'newer commit', 'newer commits')} missing`,
     'n.f.incoming': 'Other branches merged into this one', 'n.f.incomingD': 'They come along wherever this branch is merged.',
     'n.f.checkout': 'Check out this branch:',
+    'sort.hint': 'Click to sort; click again to reverse',
+    'iss.noKey': 'Preview: set your Backlog API key in the repository settings (click the repository name at the top left).',
+    'iss.notFound': 'This issue was not found in Backlog.', 'iss.assignee': 'Assignee', 'iss.priority': 'Priority', 'iss.due': 'Due', 'iss.updated': 'Updated',
+    'iss.open': 'Click to open in Backlog (new tab)',
+    'repo.issueUrl': 'Issue link', 'repo.issueUrlHint': 'Opened when you click a branch name; {key} is replaced by the issue key in the branch name (feature/PROJ-978 → PROJ-978). Empty = no links.',
+    'repo.apiKey': 'Backlog API key (for issue previews)', 'repo.apiKeySaved': 'saved (leave empty to keep it)',
+    'repo.apiKeyHint': 'Backlog → Personal settings → API. Stored only in config.json on this PC and used only by the local server.',
+    'repo.apiKeyRemove': 'Remove the saved API key',
     'n.mAuto': 'This branch', 'n.mAutoD': 'The branch itself is always shown completely.',
     'n.s.ctx': 'Show other branches (faded)', 'n.z.hint': 'Zoom: Ctrl + mouse wheel over the graph (or these buttons). Drag to move, Shift + wheel to scroll sideways.',
     'n.f.ctxD': 'Other branches are faded; drag the scroll bars or zoom to look around.',
@@ -613,6 +634,14 @@ const I18N = {
     'n.f.latest': '最新', 'n.f.old': '古い版: 新しいコミット {n} 件が未反映',
     'n.f.incoming': 'このブランチにマージされた他のブランチ', 'n.f.incomingD': 'このブランチをマージすると、これらも一緒に入ります。',
     'n.f.checkout': 'このブランチをチェックアウト:',
+    'sort.hint': 'クリックで並べ替え、もう一度クリックで逆順',
+    'iss.noKey': 'プレビュー: リポジトリの設定（左上のリポジトリ名をクリック）で Backlog の API キーを設定してください。',
+    'iss.notFound': 'この課題は Backlog に見つかりませんでした。', 'iss.assignee': '担当者', 'iss.priority': '優先度', 'iss.due': '期限', 'iss.updated': '更新',
+    'iss.open': 'クリックで Backlog を開きます（新しいタブ）',
+    'repo.issueUrl': '課題リンク', 'repo.issueUrlHint': 'ブランチ名をクリックしたときに開く URL です。{key} はブランチ名の課題キーに置き換わります（feature/PROJ-978 → PROJ-978）。空欄の場合はリンクなし。',
+    'repo.apiKey': 'Backlog API キー（課題プレビュー用）', 'repo.apiKeySaved': '保存済み（空欄のままなら変更しません）',
+    'repo.apiKeyHint': 'Backlog → 個人設定 → API で発行します。このPCの config.json にだけ保存され、ローカルのサーバーだけが使用します。',
+    'repo.apiKeyRemove': '保存した API キーを削除',
     'n.mAuto': 'このブランチの期間', 'n.mAutoD': '検索したブランチは常に全体を表示します。',
     'n.s.ctx': '他のブランチを薄く表示', 'n.z.hint': 'ズーム: グラフ上で Ctrl + マウスホイール（またはこのボタン）。ドラッグで移動、Shift + ホイールで横スクロール。',
     'n.f.ctxD': '他のブランチは薄く表示しています。スクロールやズームで周りも確認できます。',
@@ -628,7 +657,10 @@ const SERVER_MSG_JA = [
   [/^Refused, not merged into (\S+) \(or protected\): /, '拒否しました。$1 に未マージ、または保護されたブランチです: '],
   [/^Refused, not a merged release branch: /, '拒否しました。マージ済みのリリースブランチではありません: '],
   [/^Refused, not merged or protected: /, '拒否しました。未マージ、または保護されたブランチです: '],
-  [/^unknown commit /, '不明なコミット: '], [/^unknown branch /, '不明なブランチ: '], [/^unknown environment /, '不明な環境: '], [/^Nothing selected\.$/, '何も選択されていません。'],
+  [/^unknown commit /, '不明なコミット: '], [/^unknown issue /, '不明な課題: '],
+  [/^The issue link must be an http\(s\) URL containing \{key\}$/, '課題リンクは {key} を含む http(s) の URL にしてください'],
+  [/^Backlog API key was rejected$/, 'Backlog の API キーが拒否されました（設定を確認してください）'],
+  [/^Backlog could not be reached$/, 'Backlog に接続できませんでした'], [/^Backlog error /, 'Backlog のエラー: '], [/^unknown branch /, '不明なブランチ: '], [/^unknown environment /, '不明な環境: '], [/^Nothing selected\.$/, '何も選択されていません。'],
   [/^Folder not found: /, 'フォルダが見つかりません: '], [/^Not a git repository: /, 'gitリポジトリではありません: '],
   [/^This repository has no remote: /, 'このリポジトリにはリモートがありません: '], [/^No branches found on the remote: /, 'リモートにブランチがありません: '],
   [/^No repository selected$/, 'リポジトリが選択されていません'], [/^Cannot remove the repository that is open$/, '使用中のリポジトリは一覧から削除できません'],
@@ -787,52 +819,135 @@ function vOverview() {
     </div>
   </div>`;
   $('#main').querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => show(b.dataset.go)));
-  $('#main').querySelectorAll('[data-feat]').forEach(tr => tr.addEventListener('click', () => { S.openRows.add(tr.dataset.feat); show('features'); }));
+  $('#main').querySelectorAll('[data-feat]').forEach(tr => tr.addEventListener('click', ev => { if (ev.target.closest('a')) return; S.openRows.add(tr.dataset.feat); show('features'); }));
+  bindSort($('#main'), MATRIX_SORT_DEF, vOverview);
 }
 // Where is each unreleased feature: one column per environment branch, plus open releases
 function envMatrix() {
   const ov = S.ov, envs = ov.envNames;
   if (!ov.features.length) return '';
-  const rank = f => envs.reduce((n, e) => n + (f.env[e] === 'full' ? 2 : f.env[e] === 'old' ? 1 : 0), 0);
-  const rows = ov.features.slice().sort((a, b) => rank(b) - rank(a) || (a.ticket || '').localeCompare(b.ticket || ''));
+  const DEF = MATRIX_SORT_DEF;
+  const rows = sortFeatures(ov.features, 'overview', DEF.overview);
+  const th = (key, label) => sortTh('overview', DEF.overview, key, label);
   const cell = s => s === 'full' ? badge('b-ok', t('f.latest')) : s === 'old' ? badge('b-warn', t('f.oldVersion')) : '<span class="muted">—</span>';
   const head = e => {
     const n = ov.features.filter(f => f.env[e] !== 'none').length, old = ov.features.filter(f => f.env[e] === 'old').length;
-    return `<th>${esc(e)} <span class="muted" style="font-weight:400">(${n}${old ? ` · ${esc(t('ov.envOld', { n: old }))}` : ''})</span></th>`;
+    return th('env:' + e, `${esc(e)} <span class="muted" style="font-weight:400">(${n}${old ? ` · ${esc(t('ov.envOld', { n: old }))}` : ''})</span>`);
   };
   return `<div class="section"><header><h2>${esc(t('ov.envT'))}</h2><div class="hint">${esc(t('ov.envHint'))}</div></header>
-    <div class="tbl-wrap"><table><thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th>${envs.map(head).join('')}<th>${esc(t('f.th.release'))}</th></tr></thead>
-    <tbody>${rows.map(f => `<tr data-feat="${esc(f.short)}" style="cursor:pointer"><td class="mono">${esc(f.short)}</td><td>${esc(f.authors.join(', '))}</td>${envs.map(e => `<td>${cell(f.env[e])}</td>`).join('')}<td>${relCell(f)}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <div class="tbl-wrap"><table><thead><tr>${th('branch', esc(t('f.th.branch')))}${th('owner', esc(t('f.th.owner')))}${envs.map(head).join('')}${th('release', esc(t('f.th.release')))}</tr></thead>
+    <tbody>${rows.map(f => `<tr data-feat="${esc(f.short)}" style="cursor:pointer"><td>${brLink(f.short)}</td><td>${esc(f.authors.join(', '))}</td>${envs.map(e => `<td>${cell(f.env[e])}</td>`).join('')}<td>${relCell(f)}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 function card(title, big, sub, go, tone) {
   const color = tone ? `style="color:var(--${tone})"` : '';
   return `<div class="card click" data-go="${go}"><h3>${esc(title)}</h3><div class="big" ${color}>${esc(big)}</div><div class="sub">${esc(sub)}</div></div>`;
 }
 
+// ============================================================ sorting of feature tables
+const SORT = (() => { try { return JSON.parse(localStorage.getItem('gbt-sort') || '{}'); } catch (e) { return {}; } })();
+const ticketNum = f => { const m = (f.short || '').match(/(\d+)(?!.*\d)/); return m ? +m[1] : 0; };
+const envRank = s => s === 'full' ? 2 : s === 'old' ? 1 : 0;
+const relRank = f => { let r = 0; (S.ov.releases || []).forEach(x => { const i = x.included.find(y => y.short === f.short); if (i) r = Math.max(r, i.state === 'latest' ? 2 : 1); }); return r; };
+const FEAT_SORT = {
+  branch: f => ticketNum(f), owner: f => f.authors.join(', ').toLowerCase(), date: f => f.date, commits: f => f.ahead, base: f => f.behind,
+  conflict: f => f.conflicts == null ? -1 : f.conflicts.length, release: relRank, contains: f => f.contains.length,
+  envs: f => S.ov.envNames.reduce((n, e) => n + envRank(f.env[e]), 0),
+};
+const MATRIX_SORT_DEF = { overview: { key: 'envs', dir: 'desc' } };
+const sortVal = (key, f) => key.startsWith('env:') ? envRank(f.env[key.slice(4)]) : (FEAT_SORT[key] || FEAT_SORT.branch)(f);
+function sortFeatures(rows, table, def) {
+  const st = SORT[table] || def;
+  return rows.slice().sort((a, b) => {
+    const x = sortVal(st.key, a), y = sortVal(st.key, b), c = x < y ? -1 : x > y ? 1 : 0;
+    return (st.dir === 'desc' ? -c : c) || ticketNum(a) - ticketNum(b);
+  });
+}
+// a clickable column header: ▲ ascending, ▼ descending, ↕ not sorted by this column
+function sortTh(table, def, key, label) {
+  const st = SORT[table] || def, on = st.key === key;
+  return `<th class="sortable${on ? ' on' : ''}" data-sort="${esc(table)}|${esc(key)}" title="${esc(t('sort.hint'))}">${label}<span class="sarrow">${on ? (st.dir === 'desc' ? '▼' : '▲') : '↕'}</span></th>`;
+}
+function bindSort(root, defs, rerender) {
+  root.querySelectorAll('th[data-sort]').forEach(th => th.addEventListener('click', () => {
+    const [table, key] = th.dataset.sort.split('|'), st = SORT[table] || defs[table];
+    const numeric = ['date', 'commits', 'base', 'conflict', 'release', 'contains', 'envs'].includes(key) || key.startsWith('env:');
+    SORT[table] = { key, dir: st.key === key ? (st.dir === 'asc' ? 'desc' : 'asc') : (numeric ? 'desc' : 'asc') };
+    try { localStorage.setItem('gbt-sort', JSON.stringify(SORT)); } catch (e) {}
+    rerender();
+  }));
+}
+
+// ============================================================ issue links and previews
+// The issue key comes from the branch name (feature/PROJ-978 -> PROJ-978); the link template is a repository setting
+const issueKeyOf = name => (String(name).match(/[A-Z][A-Z0-9_]*-\d+/) || [])[0] || null;
+function brLink(name) {
+  const key = issueKeyOf(name), url = S.ov && S.ov.issueUrl;
+  if (!key || !url) return `<span class="mono">${esc(name)}</span>`;
+  return `<a class="mono br-link" href="${esc(url.replace('{key}', encodeURIComponent(key)))}" target="_blank" rel="noopener" data-issue="${esc(key)}">${esc(name)}</a>`;
+}
+const ISSUES = new Map();
+let issueHover = null, issueTimer = null;
+document.addEventListener('mouseover', ev => {
+  const a = ev.target.closest && ev.target.closest('[data-issue]');
+  if (!a || a === issueHover) return;
+  issueHover = a; clearTimeout(issueTimer); issueTimer = setTimeout(() => showIssue(a), 350);
+});
+document.addEventListener('mouseout', ev => {
+  const a = ev.target.closest && ev.target.closest('[data-issue]');
+  if (!a || (ev.relatedTarget && a.contains(ev.relatedTarget))) return;
+  issueHover = null; clearTimeout(issueTimer); $('#issueTip').hidden = true;
+});
+function placeIssueTip(box, a) {
+  const r = a.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+  box.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+  box.style.top = (r.bottom + 6 + h > innerHeight ? Math.max(8, r.top - h - 6) : r.bottom + 6) + 'px';
+}
+async function showIssue(a) {
+  const key = a.dataset.issue, box = $('#issueTip');
+  box.innerHTML = `<div class="loading" style="padding:4px">${spin(t('loading'))}</div>`; box.hidden = false; placeIssueTip(box, a);
+  let d = ISSUES.get(key);
+  if (!d) { try { d = await api('/api/issue?key=' + encodeURIComponent(key)); ISSUES.set(key, d); } catch (e) { d = { key, error: e.message }; } }
+  if (issueHover !== a) return;
+  const head = `<div class="it-h"><b class="mono">${esc(key)}</b>${d.type ? `<span class="badge" style="background:${esc(d.typeColor || 'var(--chip)')};color:#fff">${esc(d.type)}</span>` : ''}${d.status ? badge('b-info', d.status) : ''}</div>`;
+  let body;
+  if (d.error) body = `<div class="small" style="color:var(--bad)">${esc(d.error)}</div>`;
+  else if (d.noApiKey) body = `<div class="small muted">${esc(t('iss.noKey'))}</div>`;
+  else if (d.notFound) body = `<div class="small muted">${esc(t('iss.notFound'))}</div>`;
+  else body = `<div class="it-s">${esc(d.summary)}</div>
+    <div class="it-m">${[[t('iss.assignee'), d.assignee], [t('iss.priority'), d.priority], [t('iss.due'), d.due], [t('iss.updated'), d.updated]].filter(x => x[1]).map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join('')}</div>
+    ${d.description ? `<div class="it-d">${esc(d.description)}</div>` : ''}`;
+  box.innerHTML = head + body + `<div class="it-f">${esc(t('iss.open'))}</div>`;
+  placeIssueTip(box, a);
+}
+
 // ============================================================ features
 function vFeatures() {
   const ov = S.ov, envs = ov.envNames, main = ov.main;
-  const rows = ov.features.slice().sort((a, b) => (b.conflicts?.length || 0) - (a.conflicts?.length || 0) || (a.ticket || '').localeCompare(b.ticket || ''));
+  const DEF = { features: { key: 'conflict', dir: 'desc' } };
+  const rows = sortFeatures(ov.features, 'features', DEF.features);
+  const th = (key, label) => sortTh('features', DEF.features, key, label);
   const envCell = s => s === 'full' ? badge('b-ok', t('f.latest')) : s === 'old' ? badge('b-warn', t('f.oldVersion')) : badge('b-mute', '—');
   const fc = S.results.featureConflicts;
   $('#main').innerHTML = topbar(t('f.title'), `<button class="btn" id="btnPairs">${esc(t('f.pairsBtn'))}</button>`) + `
   <div class="grid">
     <div class="section"><header><h2>${esc(t('f.section', { n: rows.length }))}</h2><div class="hint">${esc(t('f.hint', { main }))}</div></header>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th><th>${esc(t('f.th.last'))}</th><th>${esc(t('f.th.commits'))}</th><th>${esc(t('f.th.base'))}</th><th>${esc(t('f.th.conflict', { main }))}</th>${envs.map(e => `<th>${esc(e)}</th>`).join('')}<th>${esc(t('f.th.release'))}</th><th>${esc(t('f.th.contains'))}</th></tr></thead>
+      <thead><tr>${th('branch', esc(t('f.th.branch')))}${th('owner', esc(t('f.th.owner')))}${th('date', esc(t('f.th.last')))}${th('commits', esc(t('f.th.commits')))}${th('base', esc(t('f.th.base')))}${th('conflict', esc(t('f.th.conflict', { main })))}${envs.map(e => th('env:' + e, esc(e))).join('')}${th('release', esc(t('f.th.release')))}${th('contains', esc(t('f.th.contains')))}</tr></thead>
       <tbody>${rows.map(f => {
         const open = S.openRows.has(f.short);
         const base = f.behind === 0 ? badge('b-ok', t('f.current')) : badge('b-warn', t('f.behind', { n: f.behind }));
         const conf = f.conflicts == null ? badge('b-mute', '?') : f.conflicts.length ? badge('b-bad', t('f.files', { n: f.conflicts.length })) : badge('b-ok', t('none'));
-        let html = `<tr data-row="${esc(f.short)}" style="cursor:pointer"><td class="mono">${open ? '▾' : '▸'} ${esc(f.short)}</td><td>${esc(f.authors.join(', '))}</td><td class="nw">${esc(f.date)}</td><td style="font-variant-numeric:tabular-nums">${f.ahead}</td><td>${base}</td><td>${conf}</td>${envs.map(e => `<td>${envCell(f.env[e])}</td>`).join('')}<td>${relCell(f)}</td><td>${f.contains.length ? badge('b-warn', f.contains.join(', ')) : '<span class="muted">—</span>'}</td></tr>`;
+        let html = `<tr data-row="${esc(f.short)}" style="cursor:pointer"><td class="mono">${open ? '▾' : '▸'} ${brLink(f.short)}</td><td>${esc(f.authors.join(', '))}</td><td class="nw">${esc(f.date)}</td><td style="font-variant-numeric:tabular-nums">${f.ahead}</td><td>${base}</td><td>${conf}</td>${envs.map(e => `<td>${envCell(f.env[e])}</td>`).join('')}<td>${relCell(f)}</td><td>${f.contains.length ? badge('b-warn', f.contains.join(', ')) : '<span class="muted">—</span>'}</td></tr>`;
         if (open) html += `<tr class="expand"><td colspan="${9 + envs.length}">${featureDetail(f)}</td></tr>`;
         return html;
       }).join('')}</tbody></table></div></div>
     ${fc ? pairsSection(fc) : ''}
   </div>`;
-  $('#main').querySelectorAll('[data-row]').forEach(tr => tr.addEventListener('click', () => {
+  $('#main').querySelectorAll('[data-row]').forEach(tr => tr.addEventListener('click', ev => {
+    if (ev.target.closest('a')) return;            // the branch name opens the issue instead
     const k = tr.dataset.row; S.openRows.has(k) ? S.openRows.delete(k) : S.openRows.add(k); vFeatures();
   }));
+  bindSort($('#main'), DEF, vFeatures);
   $('#main').querySelectorAll('[data-netshow]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); S.netQuery = b.dataset.netshow; show('network'); }));
   $('#btnPairs').addEventListener('click', async () => {
     const b = $('#btnPairs'); b.disabled = true; b.innerHTML = spin(t('f.pairsRunning'));
@@ -876,7 +991,8 @@ function vReleases() {
   $('#main').innerHTML = topbar(t('rel.title')) + (rs.length
     ? `<div class="grid">${rs.map(releaseSection).join('')}</div>`
     : `<div class="section"><div class="empty">${esc(t('rel.none', { main: ov.main }))}</div></div>`);
-  $('#main').querySelectorAll('[data-relrow]').forEach(tr => tr.addEventListener('click', () => {
+  $('#main').querySelectorAll('[data-relrow]').forEach(tr => tr.addEventListener('click', ev => {
+    if (ev.target.closest('a')) return;
     const k = tr.dataset.relrow; S.openRows.has(k) ? S.openRows.delete(k) : S.openRows.add(k); vReleases();
   }));
 }
@@ -889,7 +1005,7 @@ function releaseSection(r) {
   const envCell = s => s === 'full' ? badge('b-ok', t('f.latest')) : s === 'old' ? badge('b-warn', t('f.oldVersion')) : '<span class="muted">—</span>';
   const rows = inc.map(x => {
     const key = r.name + '|' + x.short, open = S.openRows.has(key), canOpen = x.state === 'outdated' || x.state === 'rewritten';
-    let h = `<tr ${canOpen ? `data-relrow="${esc(key)}" style="cursor:pointer"` : ''}><td class="mono">${canOpen ? (open ? '▾ ' : '▸ ') : ''}${esc(x.short)}</td><td>${esc((x.authors || []).join(', '))}</td><td>${REL_STATE[x.state](x)}</td>${envs.map(e => `<td>${envCell((x.env || {})[e])}</td>`).join('')}<td>${esc(x.title || '')}</td></tr>`;
+    let h = `<tr ${canOpen ? `data-relrow="${esc(key)}" style="cursor:pointer"` : ''}><td class="mono">${canOpen ? (open ? '▾ ' : '▸ ') : ''}${brLink(x.short)}</td><td>${esc((x.authors || []).join(', '))}</td><td>${REL_STATE[x.state](x)}</td>${envs.map(e => `<td>${envCell((x.env || {})[e])}</td>`).join('')}<td>${esc(x.title || '')}</td></tr>`;
     if (open && canOpen) {
       const cmd = `git checkout ${r.name}\ngit pull\ngit merge --no-ff ${ov.remote}/${x.short}\ngit push`;
       h += `<tr class="expand"><td colspan="${4 + envs.length}"><div class="grid" style="gap:8px;padding:4px 0">
@@ -914,7 +1030,7 @@ function releaseSection(r) {
       <div><b>${esc(t('rel.directT', { n: r.direct.length }))}</b><div class="small muted">${esc(t('rel.directD'))}</div>
         ${r.direct.length ? `<table style="margin-top:6px"><tbody>${r.direct.map(c => `<tr><td class="mono">${esc(c.h)}</td><td class="nw">${esc(c.d)}</td><td>${esc(c.a)}</td><td>${esc(c.s)}</td></tr>`).join('')}</tbody></table>` : `<div class="small" style="margin-top:4px">${badge('b-ok', t('rel.noDirect'))}</div>`}</div>
       <div><b>${esc(t('rel.candT', { n: r.candidates.length }))}</b><div class="small muted">${esc(t('rel.candD'))}</div>
-        ${r.candidates.length ? `<div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th>${envs.map(e => `<th>${esc(e)}</th>`).join('')}<th>${esc(t('f.th.conflict', { main }))}</th></tr></thead><tbody>${r.candidates.map(c => `<tr><td class="mono">${esc(c.short)}</td><td>${esc(c.authors.join(', '))}</td>${envs.map(e => `<td>${envCell(c.env[e])}</td>`).join('')}<td>${c.conflicts == null ? '?' : c.conflicts.length ? badge('b-bad', t('f.files', { n: c.conflicts.length })) : badge('b-ok', t('none'))}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>
+        ${r.candidates.length ? `<div class="tbl-wrap" style="margin-top:6px"><table><thead><tr><th>${esc(t('f.th.branch'))}</th><th>${esc(t('f.th.owner'))}</th>${envs.map(e => `<th>${esc(e)}</th>`).join('')}<th>${esc(t('f.th.conflict', { main }))}</th></tr></thead><tbody>${r.candidates.map(c => `<tr><td>${brLink(c.short)}</td><td>${esc(c.authors.join(', '))}</td>${envs.map(e => `<td>${envCell(c.env[e])}</td>`).join('')}<td>${c.conflicts == null ? '?' : c.conflicts.length ? badge('b-bad', t('f.files', { n: c.conflicts.length })) : badge('b-ok', t('none'))}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>
       <div><b>${esc(t('rel.notesT'))}</b><div class="small muted">${esc(t('rel.notesD'))}</div>${copyBtn(notes)}</div>
     </div></div>`;
 }
@@ -1919,6 +2035,9 @@ function renderRepoDialog(list) {
       <label class="field"><span>${esc(t('repo.main'))}</span><select id="setMain">${info.branches.filter(notTopic).map(b => `<option ${b === s.main ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select><small>${esc(t('repo.mainHint'))}</small></label>
       <div class="field"><span>${esc(t('repo.envs'))}</span><div class="row">${envCands.length ? envCands.map(b => `<label class="chk"><input type="checkbox" data-env value="${esc(b)}" ${s.envs.includes(b) ? 'checked' : ''}> <span class="mono">${esc(b)}</span></label>`).join('') : `<small>${esc(t('repo.noEnvCandidates'))}</small>`}</div><small>${esc(t('repo.envsHint'))}</small></div>
       <label class="field"><span>${esc(t('repo.checkPaths'))}</span><input type="text" id="setPaths" value="${esc(s.checkPaths.join(', '))}"><small>${esc(t('repo.checkPathsHint'))}</small></label>
+      <label class="field"><span>${esc(t('repo.issueUrl'))}</span><input type="text" id="setIssueUrl" value="${esc(s.issueUrl || '')}" placeholder="https://space.backlog.jp/view/{key}"><small>${esc(t('repo.issueUrlHint'))}</small></label>
+      <label class="field"><span>${esc(t('repo.apiKey'))}</span><input type="password" id="setApiKey" autocomplete="new-password" placeholder="${esc(info.hasApiKey ? t('repo.apiKeySaved') : '')}"><small>${esc(t('repo.apiKeyHint'))}</small></label>
+      ${info.hasApiKey ? `<label class="chk small" style="margin:-4px 0 10px"><input type="checkbox" id="setRemoveKey"> ${esc(t('repo.apiKeyRemove'))}</label>` : ''}
       <button class="btn primary" id="repoSave">${esc(t('repo.save'))}</button>`;
   }
   $('#dlgBody').innerHTML = h;
@@ -1935,9 +2054,11 @@ function renderRepoDialog(list) {
     const payload = {
       remote: $('#setRemote') ? $('#setRemote').value : info.settings.remote, main: $('#setMain').value,
       envs: [...body.querySelectorAll('[data-env]:checked')].map(i => i.value), checkPaths: $('#setPaths').value.split(','),
+      issueUrl: $('#setIssueUrl').value, apiKey: $('#setApiKey').value, removeApiKey: !!($('#setRemoveKey') && $('#setRemoveKey').checked),
     };
     try {
       await api('/api/repo/settings', payload);
+      ISSUES.clear();
       $('#dlg').close(); toast(t('repo.saved')); resetRepoState();
       $('#main').innerHTML = `<div class="loading">${spin(t('loading'))}</div>`;
       await load(true);

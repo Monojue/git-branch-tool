@@ -44,6 +44,7 @@ let CFG = null, MAIN = null, ENVS = [];
 function useRepo(p) {
   CFG = { repo: p, ...CONF.repos[p] };
   MAIN = R(CFG.main); ENVS = CFG.envs.map(R); cache = null;
+  defaultIssueUrlCache = null; if (typeof issueCache !== 'undefined') issueCache.clear();
 }
 const R = n => `${CFG.remote}/${n}`;            // local short name -> remote-tracking ref
 const short = n => n.startsWith(CFG.remote + '/') ? n.slice(CFG.remote.length + 1) : n;
@@ -198,8 +199,11 @@ async function overview(force) {
   local.forEach(b => { b.merged = localMerged.has(b.name); b.protected = [current, CFG.main, ...CFG.envs, 'main'].includes(b.name); });
 
   const remoteUrl = hideCreds((await git(['remote', 'get-url', CFG.remote])).stdout.trim());
+  defaultIssueUrlCache = await defaultIssueUrl();
+  const issueUrl = effectiveIssueUrl();
   cache = {
     repo: path.basename(CFG.repo), repoPath: CFG.repo, remote: CFG.remote, remoteUrl, main: CFG.main, envNames: CFG.envs, checkPaths: CFG.checkPaths,
+    issueUrl, issuePreview: !!apiKeyFor(issueUrl),
     current, dirty: lines(status).length, dirtyFiles: lines(status).slice(0, 30),
     fetchedAt, generatedAt: new Date().toISOString(),
     refs: refs.map(({ name, short, kind, merged, date, author, subject, ticket }) => ({ name, short, kind, merged, date, author, subject, ticket })),
@@ -442,12 +446,62 @@ async function repoSettings(b) {
   if (missing.length) throw new Error('Branch not found on the remote: ' + missing.join(', '));
   if (s.envs.includes(s.main)) throw new Error('The main branch cannot also be an environment branch');
   if (!s.checkPaths.length) s.checkPaths = defaultCheckPaths(CFG.repo);
-  CONF.repos[CFG.repo] = s; saveConf(); useRepo(CFG.repo);
+  // issue link: a URL containing {key}, e.g. https://space.backlog.jp/view/{key}; empty = no links
+  const issueUrl = (b.issueUrl || '').trim();
+  if (issueUrl && (!/^https?:\/\/[^\s]+$/.test(issueUrl) || !issueUrl.includes('{key}'))) throw new Error('The issue link must be an http(s) URL containing {key}');
+  s.issueUrl = issueUrl;
+  // Backlog API key (for hover previews): kept per Backlog space, only in config.json on this PC
+  const host = issueHost(issueUrl);
+  CONF.backlogKeys = CONF.backlogKeys || {};
+  if (host && b.removeApiKey) delete CONF.backlogKeys[host];
+  else if (host && typeof b.apiKey === 'string' && b.apiKey.trim()) CONF.backlogKeys[host] = b.apiKey.trim();
+  CONF.repos[CFG.repo] = s; saveConf(); useRepo(CFG.repo); issueCache.clear();
   return { ok: true, settings: s, branches: d.branches };
 }
 async function repoInfo() {
   const d = await detect(CFG.repo);
-  return { path: CFG.repo, settings: CONF.repos[CFG.repo], remotes: d.remotes, branches: d.branches };
+  const issueUrl = effectiveIssueUrl();
+  return { path: CFG.repo, settings: { ...CONF.repos[CFG.repo], issueUrl }, remotes: d.remotes, branches: d.branches, hasApiKey: !!apiKeyFor(issueUrl) };
+}
+
+// ---------------------------------------------------------------- issue links and previews (Backlog)
+// Default link from the git remote: https://space.backlog.jp/git/PROJ/repo.git -> https://space.backlog.jp/view/{key}
+async function defaultIssueUrl() {
+  const u = (await git(['remote', 'get-url', CFG.remote])).stdout.trim();
+  // https://space.backlog.jp/git/... or ssh space@space.git.backlog.jp:/... (web host: space.backlog.jp)
+  const m = u.match(/^https?:\/\/(?:[^@/]+@)?([^/]+\.backlog\.(?:jp|com|tool))\//) || u.match(/@([^:/]+\.backlog\.(?:jp|com|tool))[:/]/);
+  return m ? `https://${m[1].replace('.git.backlog.', '.backlog.')}/view/{key}` : '';
+}
+let defaultIssueUrlCache = null;
+function effectiveIssueUrl() {
+  const s = CONF.repos[CFG.repo] || {};
+  return typeof s.issueUrl === 'string' ? s.issueUrl : (defaultIssueUrlCache || '');
+}
+const issueHost = url => { try { return url ? new URL(url.replace('{key}', 'X')).host : null; } catch (e) { return null; } };
+const apiKeyFor = url => { const h = issueHost(url); return h && CONF.backlogKeys ? CONF.backlogKeys[h] : null; };
+const issueCache = new Map();                    // key -> { at, data }
+async function issueInfo(key) {
+  if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(key || '')) throw new Error('unknown issue ' + key);
+  const url = effectiveIssueUrl(), apiKey = apiKeyFor(url);
+  if (!url) return { key, noLink: true };
+  if (!apiKey) return { key, url: url.replace('{key}', key), noApiKey: true };
+  const hit = issueCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.data;
+  const host = issueHost(url);
+  let r;
+  try { r = await fetch(`https://${host}/api/v2/issues/${encodeURIComponent(key)}?apiKey=${encodeURIComponent(apiKey)}`, { signal: AbortSignal.timeout(8000) }); }
+  catch (e) { throw new Error('Backlog could not be reached'); }
+  if (r.status === 401 || r.status === 403) throw new Error('Backlog API key was rejected');
+  if (r.status === 404) return { key, url: url.replace('{key}', key), notFound: true };
+  if (!r.ok) throw new Error('Backlog error ' + r.status);
+  const j = await r.json(), name = x => (x && x.name) || '';
+  const data = {
+    key, url: url.replace('{key}', key), summary: j.summary, status: name(j.status), type: name(j.issueType), typeColor: j.issueType && j.issueType.color,
+    priority: name(j.priority), assignee: name(j.assignee), createdBy: name(j.createdUser), due: (j.dueDate || '').slice(0, 10), updated: (j.updated || '').slice(0, 10),
+    description: (j.description || '').replace(/\r/g, '').slice(0, 400),
+  };
+  issueCache.set(key, { at: Date.now(), data });
+  return data;
 }
 // List sub-folders of a folder, marking git repositories (for the folder picker)
 function browse(dir) {
@@ -474,6 +528,7 @@ const ROUTES = {
   'GET /api/overview': q => overview(q.get('refresh') === '1'),
   'GET /api/graph': () => graph(),
   'GET /api/commit': q => commitInfo(q.get('h')),
+  'GET /api/issue': q => issueInfo(q.get('key')),
   'GET /api/env-check': q => envCheck(q.get('env')),
   'GET /api/feature-conflicts': () => featureConflicts(),
   'POST /api/rebuild-preview': (q, b) => rebuildPreview(b.env, b.branches || []),
