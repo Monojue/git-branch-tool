@@ -36,7 +36,7 @@ function vFeatures() {
 }
 function featureDetail(f) {
   const ov = S.ov, main = ov.main;
-  const cmd = `git checkout ${f.short}\ngit fetch && git rebase ${ov.remote}/${main}\ngit push --force-with-lease`;
+  const cmd = `git checkout ${f.short}\ngit fetch\ngit rebase ${ov.remote}/${main}\ngit push --force-with-lease`;
   return `<div class="grid" style="gap:10px;padding:4px 0">
     <div><button class="btn sm" data-netshow="${esc(f.short)}">🔎 ${esc(t('f.showNet'))}</button></div>
     ${f.conflicts && f.conflicts.length ? `<div><b>${esc(t('f.d.conflicts', { main }))}</b> ${esc(t('f.d.conflictsD'))}<ul class="files">${f.conflicts.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}

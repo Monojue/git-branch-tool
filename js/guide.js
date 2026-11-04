@@ -43,7 +43,8 @@ git push -u origin feature/PROJ-1234</pre>
       <div class="tip">Squash your commits into one before rebasing, and you resolve the conflicts only once.</div>
 
       <h3>Put a feature on dev or staging for testing</h3>
-      <pre>git checkout staging && git pull
+      <pre>git checkout staging
+git pull
 git merge --no-ff origin/feature/PROJ-1234
 git push</pre>
       <p>Always merge from the feature branch. Never merge staging into dev, dev into staging, or either of them into a feature or release.</p>
@@ -160,7 +161,8 @@ git push -u origin feature/PROJ-1234</pre>
       <div class="tip">リベースの前にコミットを1つにまとめる（スカッシュ）と、コンフリクト解消が1回で済みます。</div>
 
       <h3>機能ブランチを dev / staging でテストする</h3>
-      <pre>git checkout staging && git pull
+      <pre>git checkout staging
+git pull
 git merge --no-ff origin/feature/PROJ-1234
 git push</pre>
       <p>必ず機能ブランチからマージします。staging を dev に、dev を staging に、またはそれらを機能ブランチやリリースにマージしないでください。</p>
