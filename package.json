@@ -1,5 +1,6 @@
 {
   "name": "git-branch-tool",
+  "version": "2.0.0",
   "private": true,
   "description": "Local web tool for inspecting and cleaning up git branches",
   "scripts": {
