@@ -31,6 +31,7 @@ Windows), run `chmod +x start.sh start.command` once.
 - `lib/`: `config.js` (settings), `git.js` (running git), `diff.js` (lost-code diff analysis)
 - `index.html`, `app.css`, `js/*.js`: the page (one script per screen; `i18n.js` holds all texts in English and Japanese)
 - `test/`: automated tests
+- `scripts/build-demo.js`, `scripts/demo/`: builds the static demo; `demo/`: the built demo (generated, do not edit)
 - `config.json`: your repository list and settings (created by the tool; personal, not shared)
 
 ## For developers
@@ -44,6 +45,17 @@ They build a small git repository with a known situation (released and unrelease
 with master, an outdated release, an unexplained change on dev; see `test/fixture.js`), start the real
 server on it with its own settings file (`GBT_CONFIG`) and check what every screen receives, including the
 safety rules of the cleanup actions. Nothing outside a temporary folder is touched. Needs only Node.js and git.
+
+### Demo (static, for free hosting)
+`demo/` is the real page answered from saved JSON instead of the server, using the made-up test
+repository: no git, no logins, no real data; buttons that change git are disabled. Any static host can
+serve it. On Vercel: import the repository, set **Root Directory** to `demo`, framework **Other**, no build command.
+
+After changing the page, rebuild it (runs the tool on the test repository for every choice of features; takes several minutes):
+
+```
+npm run build-demo                      # optional: -- --download <url> for the "Download the tool" link
+```
 
 ---
 
@@ -74,3 +86,8 @@ Windowsのデスクトップショートカット: `create-shortcut.bat` を一�
 
 `./start.sh` や `start.command` が実行できない場合（Windowsからフォルダをコピーした場合など）は、
 一度 `chmod +x start.sh start.command` を実行してください。
+
+## デモ
+`demo/` は、架空のテスト用リポジトリのデータを保存して表示する静的なデモです（git・ログイン・実データなし。gitを変更するボタンは無効）。
+Vercel などの無料の静的ホスティングで公開できます（Vercel: リポジトリをインポートし、**Root Directory** を `demo`、フレームワークを **Other**、ビルドコマンドなし）。
+画面を変更したら `npm run build-demo` で作り直してください（数分かかります）。
