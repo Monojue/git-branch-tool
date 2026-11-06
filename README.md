@@ -51,6 +51,9 @@ safety rules of the cleanup actions. Nothing outside a temporary folder is touch
 repository: no git, no logins, no real data; buttons that change git are disabled. Any static host can
 serve it. On Vercel: import the repository, set **Root Directory** to `demo`, framework **Other**, no build command.
 
+Try it locally with `npm run demo` (opens http://localhost:4790; Ctrl+C to stop). Opening `demo/index.html`
+directly from the folder does not work: browsers do not let a `file://` page load its data files.
+
 After changing the page, rebuild it (runs the tool on the test repository for every choice of features; takes several minutes):
 
 ```
@@ -91,3 +94,4 @@ Windowsのデスクトップショートカット: `create-shortcut.bat` を一�
 `demo/` は、架空のテスト用リポジトリのデータを保存して表示する静的なデモです（git・ログイン・実データなし。gitを変更するボタンは無効）。
 Vercel などの無料の静的ホスティングで公開できます（Vercel: リポジトリをインポートし、**Root Directory** を `demo`、フレームワークを **Other**、ビルドコマンドなし）。
 画面を変更したら `npm run build-demo` で作り直してください（数分かかります）。
+ローカルで試すには `npm run demo`（http://localhost:4790 が開きます。Ctrl+C で終了）。`demo/index.html` を直接開いても、ブラウザがデータファイルの読み込みを許可しないため動きません。
