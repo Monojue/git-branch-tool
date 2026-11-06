@@ -4,6 +4,9 @@ A local web tool that shows the state of a git repository's branches (features, 
 dev / staging, lost code) and helps clean them up. It runs only on your PC and opens in your browser.
 The full guide is inside the tool: **📖 Guide / 使い方**.
 
+**[Try the demo](https://monojue.github.io/git-branch-tool/)** (made-up repository, runs in the browser) ·
+**[Download](https://github.com/Monojue/git-branch-tool/releases/latest)**
+
 ## Requirements
 - [Node.js](https://nodejs.org) (any current LTS version)
 - [git](https://git-scm.com) 2.38 or newer
@@ -49,7 +52,9 @@ safety rules of the cleanup actions. Nothing outside a temporary folder is touch
 ### Demo (static, for free hosting)
 `demo/` is the real page answered from saved JSON instead of the server, using the made-up test
 repository: no git, no logins, no real data; buttons that change git are disabled. Any static host can
-serve it. On Vercel: import the repository, set **Root Directory** to `demo`, framework **Other**, no build command.
+serve it. It is published on GitHub Pages by `.github/workflows/pages.yml` whenever `demo/` changes on
+master (one-time setup: Settings → Pages → Source: **GitHub Actions**). On Vercel instead: import the
+repository, set **Root Directory** to `demo`, framework **Other**, no build command.
 
 Try it locally with `npm run demo` (opens http://localhost:4790; Ctrl+C to stop). Opening `demo/index.html`
 directly from the folder does not work: browsers do not let a `file://` page load its data files.
@@ -67,6 +72,9 @@ npm run build-demo                      # optional: -- --download <url> for the 
 gitリポジトリのブランチの状態（機能ブランチ、リリース、dev / staging、コードの欠落）を表示し、
 整理を手伝うローカルのWebツールです。PC上だけで動き、ブラウザで開きます。
 詳しい使い方はツール内の **📖 使い方** を参照してください。
+
+**[デモを試す](https://monojue.github.io/git-branch-tool/)**（架空のリポジトリ、ブラウザだけで動きます）·
+**[ダウンロード](https://github.com/Monojue/git-branch-tool/releases/latest)**
 
 ## 必要なもの
 - [Node.js](https://nodejs.org)（現行のLTS版）
